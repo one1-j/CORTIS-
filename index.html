@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icon.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CORTIS 周邊紀錄表</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon.png">
+    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         /* --- CORTIS THEME --- */
@@ -36,7 +37,7 @@
             padding: 40px 20px;
         }
 
-        /* --- Header (移除圖案，純文字) --- */
+        /* --- Header --- */
         header {
             text-align: center;
             margin-bottom: 50px;
@@ -179,6 +180,7 @@
             transition: transform 0.1s;
         }
         .btn-submit:hover { transform: scale(0.98); }
+        .btn-submit:disabled { opacity: 0.7; cursor: not-allowed; }
 
         /* --- 卡片列表樣式 --- */
         .merch-grid {
@@ -426,12 +428,10 @@
 <body>
 
     <div class="container">
-        <!-- 標題區域 -->
         <header>
             <h1>CORTIS <span>MERCH TRACKER</span></h1>
         </header>
 
-        <!-- 統計 -->
         <div class="stats-bar">
             <div class="stat-group">
                 <div class="stat-item">總項目: <span id="totalItems">0</span></div>
@@ -440,18 +440,17 @@
         </div>
 
         <div class="dashboard">
-            <!-- 左側：輸入表單 -->
             <div class="form-panel">
                 <div class="panel-title">新增紀錄</div>
                 <form id="merchForm">
                     <div class="form-group">
-                        <label>商品名稱</label>
+                        <label>商品名稱 (必填)</label>
                         <input type="text" id="name" required placeholder="輸入周邊名稱...">
                     </div>
 
                     <div class="row">
                         <div class="form-group" style="flex:1">
-                            <label>下單日期</label>
+                            <label>下單日期 (必填)</label>
                             <input type="date" id="orderDate" required>
                         </div>
                         <div class="form-group" style="flex:1">
@@ -471,7 +470,6 @@
                         </div>
                     </div>
 
-                    <!-- 匯款專用欄位 -->
                     <div id="transferFields" class="hidden" style="background: #e8e4de; padding: 10px; margin-bottom: 15px;">
                         <div class="row">
                             <div class="form-group" style="flex:1">
@@ -487,7 +485,7 @@
 
                     <div class="row">
                         <div class="form-group" style="flex:1">
-                            <label>商品原價</label>
+                            <label>商品原價 (必填)</label>
                             <input type="number" id="price" placeholder="0" required>
                         </div>
                         <div class="form-group" style="flex:1">
@@ -516,22 +514,20 @@
                     </div>
 
                     <div class="form-group">
-                        <label>商品圖片</label>
+                        <label>商品圖片 (選填)</label>
                         <input type="file" id="imageInput" accept="image/*">
+                        <small style="color:#666; display:block; margin-top:5px;">💡 系統會自動壓縮圖片以節省空間</small>
                     </div>
 
                     <button type="submit" class="btn-submit">建立紀錄</button>
                 </form>
             </div>
 
-            <!-- 右側：商品列表 -->
             <div id="merchList" class="merch-grid">
-                <!-- Javascript will render cards here -->
-            </div>
+                </div>
         </div>
     </div>
 
-    <!-- 底部批量操作列 -->
     <div id="bulkActions" class="bulk-actions-bar">
         <div class="bulk-info">已選取 <span id="selectedCount">0</span> 筆</div>
         <button class="bulk-btn" onclick="mergeSelectedItems()">🔗 合併訂單</button>
@@ -540,8 +536,7 @@
     </div>
 
     <script>
-            <script>
-        // 預設圖片 (Base64)
+        // 1. 預設圖片設定
         const DEFAULT_IMG = 'data:image/svg+xml;charset=UTF-8,%3Csvg width%3D%22300%22 height%3D%22200%22 xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 300 200%22 preserveAspectRatio%3D%22none%22%3E%3Crect width%3D%22300%22 height%3D%22200%22 fill%3D%22%23ddd%22%2F%3E%3Ctext x%3D%2250%25%22 y%3D%2250%25%22 dominant-baseline%3D%22middle%22 text-anchor%3D%22middle%22 fill%3D%22%23555%22 font-family%3D%22sans-serif%22%3ENO IMAGE%3C%2Ftext%3E%3C%2Fsvg%3E';
 
         const form = document.getElementById('merchForm');
@@ -552,13 +547,14 @@
         const bulkActionsBar = document.getElementById('bulkActions');
         const selectedCountEl = document.getElementById('selectedCount');
 
+        // 設定日期為今天
         document.getElementById('orderDate').valueAsDate = new Date();
 
         // 讀取資料
         let merchData = [];
         let selectedIds = new Set(); 
 
-        // 安全讀取資料
+        // 安全讀取資料 (防止舊資料格式錯誤)
         try {
             merchData = JSON.parse(localStorage.getItem('cortisTrackerDataV2')) || [];
         } catch (e) {
@@ -566,6 +562,7 @@
             merchData = [];
         }
 
+        // 初始化
         function init() {
             renderMerch();
             updateStats();
@@ -581,9 +578,9 @@
                 fields.classList.add('hidden');
             }
         }
-        window.togglePaymentFields = togglePaymentFields; // 確保全域可呼叫
+        window.togglePaymentFields = togglePaymentFields; // 確保 HTML 可以呼叫
 
-        // --- 圖片壓縮功能 (關鍵修正) ---
+        // --- 圖片壓縮功能 (修正版) ---
         const getBase64 = (file) => {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -617,11 +614,11 @@
             });
         }
 
-        // 新增商品
+        // 新增商品 (主功能)
         form.addEventListener('submit', async (e) => {
             e.preventDefault(); // 阻止表單跳轉
 
-            // 顯示載入中... (防止重複按)
+            // 顯示載入中...
             const btn = form.querySelector('.btn-submit');
             const originalText = btn.innerText;
             btn.innerText = "處理中...";
@@ -631,6 +628,7 @@
                 const imageInput = document.getElementById('imageInput');
                 let imageSrc = DEFAULT_IMG;
                 
+                // 如果有上傳圖片，進行處理
                 if (imageInput.files.length > 0) {
                     imageSrc = await getBase64(imageInput.files[0]);
                 }
@@ -674,16 +672,15 @@
                     form.reset();
                     document.getElementById('orderDate').valueAsDate = new Date();
                     togglePaymentFields();
-                    alert("✅ 建立成功！"); // 成功提示
+                    alert("✅ 建立成功！");
                 } catch (storageError) {
-                    // 如果儲存失敗 (通常是容量滿了)，回滾資料
-                    merchData.shift(); 
+                    merchData.shift(); // 失敗則移除
                     alert("❌ 儲存失敗：圖片可能還是太大，或是儲存空間已滿。請試著不要上傳圖片。");
                     console.error(storageError);
                 }
 
             } catch (error) {
-                alert("❌ 發生錯誤：" + error.message);
+                alert("❌ 發生未知錯誤：" + error.message);
                 console.error(error);
             } finally {
                 btn.innerText = originalText;
@@ -870,15 +867,16 @@
             });
         }
 
+        // PWA Service Worker 註冊
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('Service Worker registered'))
+                .catch(err => console.log('Service Worker failed', err));
+            });
+        }
+
         init();
     </script>
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js');
-  }
-</script>
 </body>
-
 </html>
-
-
