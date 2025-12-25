@@ -540,6 +540,7 @@
     </div>
 
     <script>
+            <script>
         // 預設圖片 (Base64)
         const DEFAULT_IMG = 'data:image/svg+xml;charset=UTF-8,%3Csvg width%3D%22300%22 height%3D%22200%22 xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 300 200%22 preserveAspectRatio%3D%22none%22%3E%3Crect width%3D%22300%22 height%3D%22200%22 fill%3D%22%23ddd%22%2F%3E%3Ctext x%3D%2250%25%22 y%3D%2250%25%22 dominant-baseline%3D%22middle%22 text-anchor%3D%22middle%22 fill%3D%22%23555%22 font-family%3D%22sans-serif%22%3ENO IMAGE%3C%2Ftext%3E%3C%2Fsvg%3E';
 
@@ -554,8 +555,16 @@
         document.getElementById('orderDate').valueAsDate = new Date();
 
         // 讀取資料
-        let merchData = JSON.parse(localStorage.getItem('cortisTrackerDataV2')) || [];
-        let selectedIds = new Set(); // 存放被選中的卡片 ID
+        let merchData = [];
+        let selectedIds = new Set(); 
+
+        // 安全讀取資料
+        try {
+            merchData = JSON.parse(localStorage.getItem('cortisTrackerDataV2')) || [];
+        } catch (e) {
+            console.error("讀取資料失敗", e);
+            merchData = [];
+        }
 
         function init() {
             renderMerch();
@@ -565,84 +574,128 @@
         // 切換匯款欄位顯示
         function togglePaymentFields() {
             const isTransfer = document.getElementById('payTransfer').checked;
+            const fields = document.getElementById('transferFields');
             if (isTransfer) {
-                transferFields.classList.remove('hidden');
+                fields.classList.remove('hidden');
             } else {
-                transferFields.classList.add('hidden');
+                fields.classList.add('hidden');
             }
         }
+        window.togglePaymentFields = togglePaymentFields; // 確保全域可呼叫
 
+        // --- 圖片壓縮功能 (關鍵修正) ---
         const getBase64 = (file) => {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.readAsDataURL(file);
-                reader.onload = () => resolve(reader.result);
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        // 建立 Canvas 進行壓縮
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 600; // 限制最大寬度 600px
+                        const scaleSize = MAX_WIDTH / img.width;
+                        
+                        // 如果圖片原本就很小，就不縮放
+                        if (scaleSize >= 1) {
+                            resolve(event.target.result);
+                            return;
+                        }
+
+                        canvas.width = MAX_WIDTH;
+                        canvas.height = img.height * scaleSize;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        
+                        // 輸出壓縮後的圖片 (品質 0.7)
+                        resolve(canvas.toDataURL('image/jpeg', 0.7));
+                    };
+                    img.onerror = (error) => reject(error);
+                };
                 reader.onerror = error => reject(error);
             });
         }
 
         // 新增商品
         form.addEventListener('submit', async (e) => {
-            e.preventDefault();
+            e.preventDefault(); // 阻止表單跳轉
 
-            const imageInput = document.getElementById('imageInput');
-            let imageSrc = DEFAULT_IMG;
-            if (imageInput.files.length > 0) {
-                try {
+            // 顯示載入中... (防止重複按)
+            const btn = form.querySelector('.btn-submit');
+            const originalText = btn.innerText;
+            btn.innerText = "處理中...";
+            btn.disabled = true;
+
+            try {
+                const imageInput = document.getElementById('imageInput');
+                let imageSrc = DEFAULT_IMG;
+                
+                if (imageInput.files.length > 0) {
                     imageSrc = await getBase64(imageInput.files[0]);
-                } catch (error) {
-                    console.error("Image Error", error);
                 }
+
+                const paymentType = document.querySelector('input[name="paymentType"]:checked').value;
+                
+                const newMerch = {
+                    id: Date.now(),
+                    name: document.getElementById('name').value,
+                    orderDate: document.getElementById('orderDate').value,
+                    source: document.getElementById('source').value,
+                    paymentType: paymentType,
+                    transferDate: document.getElementById('transferDate').value,
+                    transferAmount: Number(document.getElementById('transferAmount').value),
+                    price: Number(document.getElementById('price').value),
+                    secondPay: Number(document.getElementById('secondPay').value),
+                    shipping: Number(document.getElementById('shipping').value),
+                    link: document.getElementById('link').value,
+                    sellerLink: document.getElementById('sellerLink').value,
+                    notes: document.getElementById('notes').value,
+                    imageSrc: imageSrc,
+                    group: null,
+                    status: {
+                        ordered: true,
+                        paid: paymentType === 'Transfer',
+                        shipped: false,
+                        secondPayDone: false,
+                        arrived: false,
+                        received: false
+                    },
+                    refund: { isRefunded: false, date: '', amount: 0 }
+                };
+
+                merchData.unshift(newMerch);
+                
+                // 嘗試儲存
+                try {
+                    localStorage.setItem('cortisTrackerDataV2', JSON.stringify(merchData));
+                    renderMerch();
+                    updateStats();
+                    form.reset();
+                    document.getElementById('orderDate').valueAsDate = new Date();
+                    togglePaymentFields();
+                    alert("✅ 建立成功！"); // 成功提示
+                } catch (storageError) {
+                    // 如果儲存失敗 (通常是容量滿了)，回滾資料
+                    merchData.shift(); 
+                    alert("❌ 儲存失敗：圖片可能還是太大，或是儲存空間已滿。請試著不要上傳圖片。");
+                    console.error(storageError);
+                }
+
+            } catch (error) {
+                alert("❌ 發生錯誤：" + error.message);
+                console.error(error);
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
             }
-
-            const paymentType = document.querySelector('input[name="paymentType"]:checked').value;
-            
-            const newMerch = {
-                id: Date.now(),
-                name: document.getElementById('name').value,
-                orderDate: document.getElementById('orderDate').value,
-                source: document.getElementById('source').value,
-                paymentType: paymentType,
-                transferDate: document.getElementById('transferDate').value,
-                transferAmount: Number(document.getElementById('transferAmount').value),
-                price: Number(document.getElementById('price').value),
-                secondPay: Number(document.getElementById('secondPay').value),
-                shipping: Number(document.getElementById('shipping').value),
-                link: document.getElementById('link').value,
-                sellerLink: document.getElementById('sellerLink').value,
-                notes: document.getElementById('notes').value,
-                imageSrc: imageSrc,
-                group: null, // 合併群組名稱
-                status: {
-                    ordered: true,
-                    paid: paymentType === 'Transfer',
-                    shipped: false,
-                    secondPayDone: false,
-                    arrived: false,
-                    received: false
-                },
-                refund: {
-                    isRefunded: false,
-                    date: '',
-                    amount: 0
-                }
-            };
-
-            merchData.unshift(newMerch);
-            saveAndRender();
-            form.reset();
-            document.getElementById('orderDate').valueAsDate = new Date();
-            togglePaymentFields();
         });
 
         // 刪除單一
         function deleteMerch(id) {
             if(confirm('確定要刪除這筆紀錄嗎？')) {
                 merchData = merchData.filter(item => item.id !== id);
-                // 如果刪除的項目在選取清單中，移除它
-                if (selectedIds.has(id)) {
-                    selectedIds.delete(id);
-                }
+                if (selectedIds.has(id)) selectedIds.delete(id);
                 saveAndRender();
             }
         }
@@ -668,12 +721,9 @@
                 }
                 return;
             }
-
             const amount = prompt("請輸入退款金額:", item.price);
             if(amount === null) return;
-            
             const date = prompt("請輸入退款日期 (YYYY-MM-DD):", new Date().toISOString().split('T')[0]);
-            
             item.refund.isRefunded = true;
             item.refund.amount = Number(amount);
             item.refund.date = date;
@@ -690,13 +740,9 @@
         }
 
         // --- 選取與合併功能 ---
-
         function toggleSelection(id) {
-            if(selectedIds.has(id)) {
-                selectedIds.delete(id);
-            } else {
-                selectedIds.add(id);
-            }
+            if(selectedIds.has(id)) selectedIds.delete(id);
+            else selectedIds.add(id);
             renderSelectionUI();
         }
 
@@ -706,7 +752,6 @@
         }
 
         function renderSelectionUI() {
-            // 更新卡片外觀
             const cards = document.querySelectorAll('.merch-card');
             cards.forEach(card => {
                 const id = Number(card.dataset.id);
@@ -719,8 +764,6 @@
                     checkbox.innerHTML = '';
                 }
             });
-
-            // 顯示/隱藏底部操作列
             if(selectedIds.size > 0) {
                 bulkActionsBar.classList.add('active');
                 selectedCountEl.innerText = selectedIds.size;
@@ -736,16 +779,10 @@
             }
             const groupName = prompt("請輸入合併群組名稱 (例如: 12月集運):");
             if(groupName) {
-                // 計算被選取項目的總價 (僅顯示用，讓使用者知道)
-                let tempTotal = 0;
                 merchData.forEach(item => {
-                    if(selectedIds.has(item.id)) {
-                        item.group = groupName;
-                        tempTotal += (item.price + item.secondPay + item.shipping);
-                    }
+                    if(selectedIds.has(item.id)) item.group = groupName;
                 });
-                
-                alert(`合併完成！\n群組: ${groupName}\n合併總金額預估: NT$ ${tempTotal}`);
+                alert(`合併完成！群組: ${groupName}`);
                 clearSelection();
                 saveAndRender();
             }
@@ -761,10 +798,15 @@
 
         // 儲存並渲染
         function saveAndRender() {
-            localStorage.setItem('cortisTrackerDataV2', JSON.stringify(merchData));
-            renderMerch();
-            renderSelectionUI(); // 保持選取狀態
-            updateStats();
+            try {
+                localStorage.setItem('cortisTrackerDataV2', JSON.stringify(merchData));
+                renderMerch();
+                renderSelectionUI();
+                updateStats();
+            } catch (e) {
+                alert("儲存失敗！可能是容量滿了。");
+                console.error(e);
+            }
         }
 
         // 渲染列表
@@ -772,28 +814,18 @@
             merchList.innerHTML = '';
             merchData.forEach(item => {
                 const totalCost = item.price + item.secondPay + item.shipping;
-                const paidAmountDisplay = item.paymentType === 'Transfer' ? item.transferAmount : 0;
-                const refundClass = item.refund.isRefunded ? 'refunded' : '';
-                
                 const refundHtml = item.refund.isRefunded 
-                    ? `<div class="refund-badge">⚠ 已退款: NT$ ${item.refund.amount} (${item.refund.date})</div>` 
+                    ? `<div class="refund-badge">⚠ 已退款: NT$ ${item.refund.amount}</div>` 
                     : '';
-
                 const groupHtml = item.group 
                     ? `<div class="group-tag">📦 ${item.group} <span class="remove-group" onclick="event.stopPropagation(); ungroupItem(${item.id})">×</span></div>` 
                     : '';
 
                 const card = document.createElement('div');
-                card.className = `merch-card ${refundClass}`;
+                card.className = `merch-card ${item.refund.isRefunded ? 'refunded' : ''}`;
                 card.dataset.id = item.id;
                 
-                // 點擊卡片任何地方都可以選取 (除了按鈕)
-                // card.onclick = (e) => {
-                //    if(e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT' && !e.target.classList.contains('check-item')) {
-                //        toggleSelection(item.id);
-                //    }
-                // };
-
+                // 狀態檢查列表
                 const steps = [
                     { key: 'ordered', label: '下單' },
                     { key: 'paid', label: item.paymentType === 'Transfer' ? '已匯' : '填單' },
@@ -809,52 +841,27 @@
                     checklistHtml += `
                         <div class="check-item ${isChecked}" onclick="toggleStatus(${item.id}, '${step.key}')">
                             <span class="check-box"></span>${step.label}
-                        </div>
-                    `;
+                        </div>`;
                 });
                 checklistHtml += '</div>';
 
-                let paymentInfoHtml = item.paymentType === 'Transfer' 
-                    ? `匯款: ${item.transferDate} (NT$${item.transferAmount})` 
-                    : `貨到付款`;
+                let paymentInfo = item.paymentType === 'Transfer' ? `匯款 NT$${item.transferAmount}` : `貨到付款`;
 
                 card.innerHTML = `
-                    <div class="card-select-overlay" onclick="toggleSelection(${item.id})">
-                        <div class="custom-checkbox"></div>
-                    </div>
-                    <div class="card-img-wrap">
-                        <img src="${item.imageSrc}" class="merch-img">
-                    </div>
+                    <div class="card-select-overlay" onclick="toggleSelection(${item.id})"><div class="custom-checkbox"></div></div>
+                    <div class="card-img-wrap"><img src="${item.imageSrc}" class="merch-img"></div>
                     <div class="card-body">
                         <div class="card-header">
-                            <div>
-                                <h3 class="item-name">${item.name}</h3>
-                                ${groupHtml}
-                                <div class="order-date">下單日: ${item.orderDate}</div>
-                            </div>
+                            <div><h3 class="item-name">${item.name}</h3>${groupHtml}<div class="order-date">${item.orderDate}</div></div>
                         </div>
-
-                        <div class="card-links">
-                            ${item.link ? `<a href="${item.link}" target="_blank" class="link-btn">訂購連結</a>` : ''}
-                            ${item.sellerLink ? `<a href="${item.sellerLink}" target="_blank" class="link-btn">賣貨便</a>` : ''}
-                        </div>
-
                         <div class="finance-block">
-                            <div class="finance-row"><span>付款方式</span> <span>${paymentInfoHtml}</span></div>
-                            <div class="finance-row"><span>本體價格</span> <span>${item.price}</span></div>
-                            <div class="finance-row"><span>二補/運費</span> <span>${item.secondPay + item.shipping}</span></div>
+                            <div class="finance-row"><span>付款</span><span>${paymentInfo}</span></div>
                             <div class="finance-total">總計: NT$ ${totalCost}</div>
                             ${refundHtml}
                         </div>
-
                         ${checklistHtml}
-
-                        ${item.notes ? `<div class="notes-area">備註: ${item.notes}</div>` : ''}
-
                         <div class="card-actions">
-                            <button class="action-btn btn-refund" onclick="registerRefund(${item.id})">
-                                ${item.refund.isRefunded ? '取消退款' : '登記退款'}
-                            </button>
+                            <button class="action-btn btn-refund" onclick="registerRefund(${item.id})">退款</button>
                             <button class="action-btn" onclick="deleteMerch(${item.id})">刪除</button>
                         </div>
                     </div>
@@ -863,20 +870,7 @@
             });
         }
 
-        function updateStats() {
-            const totalItems = merchData.length;
-            const totalSpent = merchData.reduce((acc, item) => {
-                const itemCost = item.price + item.secondPay + item.shipping;
-                const refund = item.refund.isRefunded ? item.refund.amount : 0;
-                return acc + (itemCost - refund);
-            }, 0);
-
-            totalItemsEl.innerText = totalItems;
-            totalSpentEl.innerText = `NT$ ${totalSpent.toLocaleString()}`;
-        }
-
         init();
-        window.togglePaymentFields = togglePaymentFields;
     </script>
 <script>
   if ('serviceWorker' in navigator) {
@@ -886,4 +880,5 @@
 </body>
 
 </html>
+
 
