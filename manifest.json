@@ -1,6 +1,6 @@
 {
   "name": "追星錢包",
-  "short_name": "追星錢包",
+  "short_name": "CORTIS記帳",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#ffffff",
