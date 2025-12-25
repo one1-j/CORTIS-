@@ -2,586 +2,339 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CORTIS 周邊紀錄表</title>
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CORTIS 周邊紀錄 (V7 修正版)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
     <style>
-        /* --- CORTIS THEME --- */
+        /* --- CORTIS 設計系統 --- */
         :root {
-            --bg-color: #F0ECE6;   /* 米杏色 */
-            --text-color: #262626; /* 炭黑色 */
-            --white: #FFFFFF;
-            --border: 2px solid var(--text-color);
-            --font-main: 'Inter', 'Noto Sans TC', sans-serif;
-            --accent-color: #d63031; /* 警示紅 */
+            --bg-color: #F0ECE6; --card-bg: #FFFFFF; 
+            --text-main: #262626; --text-sub: #666666;
+            --border: 2px solid #262626; --accent: #d63031; 
+            --nav-height: 70px;
+            --font-stack: 'Noto Sans TC', 'Inter', sans-serif;
+            --select-color: #27ae60;
         }
-
-        * { box-sizing: border-box; }
-
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            font-family: var(--font-main);
-            margin: 0;
-            padding: 0;
-            min-height: 100vh;
-            padding-bottom: 80px; /* 預留底部操作列空間 */
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { 
+            background-color: var(--bg-color); color: var(--text-main); 
+            font-family: var(--font-stack); margin: 0; padding: 0; 
+            padding-bottom: calc(var(--nav-height) + 80px); min-height: 100vh; 
         }
-
-        .container {
-            max-width: 1100px;
-            margin: 0 auto;
-            padding: 40px 20px;
-        }
-
-        /* --- Header --- */
-        header {
-            text-align: center;
-            margin-bottom: 50px;
-            padding-bottom: 20px;
-            border-bottom: var(--border);
-        }
-
-        h1 {
-            font-size: 4rem;
-            font-weight: 900;
-            margin: 0;
-            letter-spacing: -2px;
-            text-transform: uppercase;
-            line-height: 1;
-        }
-
-        h1 span {
-            display: block;
-            font-size: 1.5rem;
-            font-weight: 700;
-            letter-spacing: 5px;
-            margin-top: 10px;
-        }
-
-        /* --- 統計數據條 --- */
-        .stats-bar {
-            background: var(--text-color);
-            color: var(--bg-color);
-            padding: 15px 20px;
-            margin-bottom: 30px;
-            display: flex;
-            justify-content: space-between;
-            font-family: monospace;
-            font-size: 1.1rem;
-            border: 2px solid var(--text-color);
-        }
-
-        .stat-group { display: flex; gap: 20px; }
-        .stat-item span { font-weight: 900; margin-left: 5px; }
-
-        /* --- 主佈局 --- */
-        .dashboard {
-            display: grid;
-            grid-template-columns: 350px 1fr;
-            gap: 40px;
-            align-items: start;
-        }
-
-        @media (max-width: 900px) {
-            .dashboard { grid-template-columns: 1fr; }
-            h1 { font-size: 3rem; }
-        }
-
-        /* --- 表單樣式 --- */
-        .form-panel {
-            background: var(--bg-color);
-            border: var(--border);
-            padding: 25px;
-            position: sticky;
-            top: 20px;
-            z-index: 10;
-        }
-
-        .panel-title {
-            font-size: 1.2rem;
-            font-weight: 900;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #ccc;
-            text-transform: uppercase;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .form-group { margin-bottom: 15px; }
         
-        label {
-            display: block;
-            font-size: 0.85rem;
-            font-weight: 700;
-            margin-bottom: 5px;
+        /* 搜尋列 */
+        .top-bar { 
+            background: var(--bg-color); padding: 15px 20px; position: sticky; 
+            top: 0; z-index: 50; border-bottom: 1px solid rgba(0,0,0,0.1); 
+            display: flex; gap: 10px; align-items: center; 
+        }
+        .search-box { flex: 1; position: relative; }
+        .search-input { 
+            width: 100%; padding: 10px 15px 10px 35px; border: 1px solid #999; 
+            border-radius: 4px; background: var(--card-bg); font-size: 15px; 
+        }
+        .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); opacity: 0.5; }
+        .sort-btn { 
+            background: var(--text-main); color: var(--bg-color); border: none; 
+            padding: 8px 12px; border-radius: 4px; font-size: 13px; font-weight: bold; white-space: nowrap; 
         }
 
-        input, select, textarea {
-            width: 100%;
-            padding: 10px;
-            background: transparent;
-            border: 1px solid #999;
-            border-radius: 0;
-            color: var(--text-color);
-            font-family: inherit;
-            font-size: 0.95rem;
+        /* 介面區塊 */
+        .view-section { display: none; padding: 20px; max-width: 1000px; margin: 0 auto; animation: fadeIn 0.2s ease; }
+        .view-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        h2.page-title { font-size: 1.8rem; font-weight: 900; margin: 0 0 20px 0; border-bottom: var(--border); padding-bottom: 10px; }
+        
+        /* 卡片網格 */
+        .card-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+        @media (min-width: 768px) { .card-grid { grid-template-columns: repeat(2, 1fr); } }
+        
+        /* 卡片本體 */
+        .merch-card { 
+            background: var(--card-bg); border: var(--border); 
+            display: flex; flex-direction: column; position: relative; transition: all 0.2s; 
         }
+        .merch-card.selected { border-color: var(--select-color); box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.3); }
 
-        input:focus, select:focus, textarea:focus {
-            outline: none;
-            border: 2px solid var(--text-color);
-            background: var(--white);
-        }
+        /* 選擇框與狀態條 */
+        .card-select-overlay { position: absolute; top: 10px; left: 10px; z-index: 5; }
+        .custom-checkbox { width: 24px; height: 24px; border: 2px solid var(--text-main); background: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; color: transparent; cursor: pointer; }
+        .merch-card.selected .custom-checkbox { background: var(--text-main); color: #fff; }
 
-        textarea { resize: vertical; height: 80px; }
+        .card-status-bar { height: 6px; background: #eee; width: 100%; display: flex; }
+        .status-segment { flex: 1; border-right: 1px solid #fff; opacity: 0.2; background: var(--text-main); }
+        .status-segment.active { opacity: 1; }
+        
+        /* 卡片頭部 */
+        .card-header { padding: 15px; padding-left: 45px; display: flex; gap: 15px; border-bottom: 1px dashed #ccc; }
+        .card-thumb { width: 80px; height: 80px; background: #eee; border: 1px solid #ccc; object-fit: cover; flex-shrink: 0; }
+        .card-title-group { flex: 1; overflow: hidden; }
+        .category-tag { font-size: 11px; background: #eee; padding: 2px 6px; border-radius: 2px; font-weight: 600; display: inline-block; margin-bottom: 4px; }
+        .group-tag { font-size: 11px; background: var(--text-main); color: #fff; padding: 2px 6px; border-radius: 2px; font-weight: 600; display: inline-block; margin-bottom: 4px; margin-right: 5px; }
+        .remove-group { cursor: pointer; margin-left: 5px; opacity: 0.7; }
+        .card-title { font-size: 17px; font-weight: 900; margin: 0 0 5px 0; line-height: 1.3; }
+        .card-subtitle { font-size: 13px; color: var(--text-sub); }
+        
+        .contact-link { color: #000; text-decoration: underline; font-weight: bold; cursor: pointer; }
 
-        .row { display: flex; gap: 10px; }
+        /* 資訊網格 (對齊核心) */
+        .info-grid { padding: 15px; display: grid; grid-template-columns: 85px 1fr; gap: 8px; font-size: 14px; align-items: baseline; }
+        .label { color: var(--text-sub); font-weight: 500; text-align-last: justify; }
+        .value { font-weight: 600; text-align: right; font-family: 'Inter', monospace; }
+        .value.highlight { font-weight: 900; font-size: 16px; border-top: 1px dashed #999; padding-top: 5px; margin-top: 5px; }
+        
+        /* 進度勾選 */
+        .checklist-row { padding: 10px 15px; background: #f9f9f9; border-top: 1px solid #eee; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 5px; }
+        .check-item { font-size: 12px; display: flex; align-items: center; gap: 4px; cursor: pointer; padding: 4px 6px; border-radius: 3px; }
+        .check-item.checked { background: #e0e0e0; font-weight: bold; }
+        .check-box { width: 12px; height: 12px; border: 1px solid #333; display: inline-block; }
+        .check-item.checked .check-box { background: #333; }
+        
+        /* 底部按鈕 (4欄) */
+        .card-actions { display: grid; grid-template-columns: repeat(4, 1fr); text-align: center; }
+        .action-btn { background: transparent; border: none; padding: 12px 2px; font-size: 12px; font-weight: 700; border-right: 1px solid #eee; color: var(--text-main); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .action-btn:last-child { border: none; }
+        .action-btn:disabled { color: #ccc; cursor: default; }
 
-        .payment-toggle {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-        .radio-label {
-            flex: 1;
-            border: 1px solid #999;
-            padding: 10px;
-            text-align: center;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: 0.2s;
-        }
-        input[type="radio"] { display: none; }
-        input[type="radio"]:checked + .radio-label {
-            background: var(--text-color);
-            color: var(--white);
-            border-color: var(--text-color);
-            font-weight: bold;
-        }
+        /* 表單樣式 */
+        .form-container { background: var(--card-bg); padding: 20px; border: var(--border); }
+        .form-row { display: flex; gap: 15px; margin-bottom: 15px; }
+        .form-col { flex: 1; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 5px; }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 0; background: #fff; font-size: 15px; color: var(--text-main); }
+        .btn-main { width: 100%; background: var(--text-main); color: #fff; padding: 15px; border: none; font-weight: 900; font-size: 16px; cursor: pointer; letter-spacing: 1px; }
+        
+        /* 設定頁 */
+        .stats-box { background: var(--text-main); color: #fff; padding: 20px; margin-bottom: 20px; text-align: center; }
+        .stats-big-num { font-size: 32px; font-weight: 900; font-family: monospace; }
+        .settings-group { background: #fff; border: var(--border); padding: 20px; margin-bottom: 20px; }
+        .btn-backup { background: #eee; border: 1px solid #ccc; padding: 12px; width: 100%; margin-bottom: 10px; font-weight: bold; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-excel { background: #27ae60; color: white; border: none; }
+
+        /* 底部導航 */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: var(--nav-height); background: var(--card-bg); border-top: var(--border); display: flex; justify-content: space-around; align-items: center; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
+        .nav-item { flex: 1; text-align: center; color: #999; font-size: 11px; font-weight: 700; cursor: pointer; padding-top: 10px; }
+        .nav-item.active { color: var(--text-main); }
+        .nav-icon { font-size: 24px; display: block; margin-bottom: 2px; }
+
+        /* 批量操作浮動列 (位置已調高，避免被遮擋) */
+        .bulk-actions-bar { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(150px); background: var(--text-main); color: #fff; padding: 10px 20px; display: flex; gap: 15px; align-items: center; border-radius: 50px; box-shadow: 0 10px 20px rgba(0,0,0,0.3); transition: transform 0.3s; z-index: 99; }
+        .bulk-actions-bar.active { transform: translateX(-50%) translateY(0); }
+        .bulk-btn { background: #fff; color: #000; border: none; padding: 5px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; }
 
         .hidden { display: none; }
-
-        .btn-submit {
-            width: 100%;
-            background: var(--text-color);
-            color: var(--bg-color);
-            border: none;
-            padding: 15px;
-            font-size: 1rem;
-            font-weight: 900;
-            cursor: pointer;
-            margin-top: 10px;
-            transition: transform 0.1s;
-        }
-        .btn-submit:hover { transform: scale(0.98); }
-        .btn-submit:disabled { opacity: 0.7; cursor: not-allowed; }
-
-        /* --- 卡片列表樣式 --- */
-        .merch-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 25px;
-        }
-
-        .merch-card {
-            background: var(--white);
-            border: var(--border);
-            position: relative;
-            transition: transform 0.2s;
-        }
-        
-        .merch-card.selected {
-            border-color: var(--accent-color);
-            box-shadow: 0 0 0 2px var(--accent-color);
-        }
-
-        .merch-card.refunded {
-            opacity: 0.6;
-            border-style: dashed;
-        }
-
-        /* 選擇框樣式 */
-        .card-select-overlay {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            z-index: 5;
-        }
-        
-        .custom-checkbox {
-            width: 24px;
-            height: 24px;
-            border: 2px solid var(--text-color);
-            background: var(--white);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            color: transparent;
-        }
-        
-        .merch-card.selected .custom-checkbox {
-            background: var(--text-color);
-            color: var(--white);
-        }
-
-        .card-img-wrap {
-            height: 200px;
-            background: #e0e0e0;
-            border-bottom: var(--border);
-            overflow: hidden;
-            position: relative;
-        }
-        .merch-img { width: 100%; height: 100%; object-fit: cover; }
-
-        .card-body { padding: 15px; }
-
-        .card-header {
-            margin-bottom: 10px;
-            padding-left: 30px; /* 為了避開 checkbox */
-        }
-        .item-name {
-            font-size: 1.1rem;
-            font-weight: 900;
-            margin: 0;
-            line-height: 1.3;
-        }
-        .order-date {
-            font-size: 0.75rem;
-            color: #666;
-            white-space: nowrap;
-        }
-
-        /* 合併訂單標籤 */
-        .group-tag {
-            display: inline-block;
-            background: var(--text-color);
-            color: var(--white);
-            font-size: 0.75rem;
-            padding: 2px 8px;
-            margin-top: 5px;
-            font-weight: bold;
-            border-radius: 2px;
-        }
-        .group-tag .remove-group {
-            margin-left: 5px;
-            cursor: pointer;
-            color: #aaa;
-        }
-        .group-tag .remove-group:hover { color: #fff; }
-
-        /* 對帳資訊區 */
-        .finance-block {
-            background: #f4f4f4;
-            padding: 10px;
-            margin: 10px 0;
-            font-size: 0.85rem;
-            border-left: 4px solid var(--text-color);
-        }
-        .finance-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
-        .finance-total { 
-            border-top: 1px dashed #aaa; 
-            padding-top: 5px; 
-            margin-top: 5px; 
-            font-weight: 900; 
-            font-size: 1rem; 
-            text-align: right;
-        }
-
-        .refund-badge {
-            color: var(--accent-color);
-            font-weight: bold;
-            display: block;
-            text-align: right;
-            font-size: 0.8rem;
-            margin-top: 5px;
-        }
-
-        /* 勾選式進度條 */
-        .progress-checklist {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin: 15px 0;
-            padding: 10px 0;
-            border-top: 1px solid #eee;
-            border-bottom: 1px solid #eee;
-        }
-        .check-item {
-            font-size: 0.75rem;
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-            user-select: none;
-        }
-        .check-box {
-            width: 14px;
-            height: 14px;
-            border: 1px solid var(--text-color);
-            margin-right: 4px;
-            display: inline-block;
-            background: transparent;
-        }
-        .check-item.checked .check-box {
-            background: var(--text-color);
-        }
-
-        /* 按鈕區 */
-        .card-links {
-            display: flex;
-            gap: 5px;
-            margin-bottom: 10px;
-        }
-        .link-btn {
-            flex: 1;
-            text-align: center;
-            text-decoration: none;
-            font-size: 0.75rem;
-            border: 1px solid #ccc;
-            color: #555;
-            padding: 5px;
-            display: block;
-        }
-        .link-btn:hover { background: #eee; }
-
-        .notes-area {
-            font-size: 0.8rem;
-            color: #555;
-            background: #fff8dc;
-            padding: 8px;
-            margin-bottom: 10px;
-            white-space: pre-wrap;
-        }
-
-        .card-actions {
-            display: flex;
-            border-top: var(--border);
-            margin: 0 -15px -15px -15px;
-        }
-        .action-btn {
-            flex: 1;
-            background: transparent;
-            border: none;
-            border-right: 1px solid #ccc;
-            padding: 10px;
-            cursor: pointer;
-            font-weight: 700;
-            color: var(--text-color);
-            font-size: 0.8rem;
-        }
-        .action-btn:last-child { border: none; }
-        .action-btn:hover { background: #eee; }
-        .btn-refund { color: var(--accent-color); }
-
-        /* --- 底部批量操作列 --- */
-        .bulk-actions-bar {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%) translateY(100px);
-            background: var(--text-color);
-            color: var(--white);
-            padding: 15px 30px;
-            display: flex;
-            gap: 20px;
-            align-items: center;
-            border-radius: 50px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 100;
-        }
-        
-        .bulk-actions-bar.active {
-            transform: translateX(-50%) translateY(0);
-        }
-
-        .bulk-btn {
-            background: var(--white);
-            color: var(--text-color);
-            border: none;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: 900;
-            cursor: pointer;
-            font-size: 0.9rem;
-        }
-        
-        .bulk-btn.danger {
-            background: var(--accent-color);
-            color: white;
-        }
-
-        .bulk-info {
-            font-weight: bold;
-            font-size: 1.1rem;
-        }
-        
+        .text-red { color: var(--accent); }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <header>
-            <h1>CORTIS <span>MERCH TRACKER</span></h1>
-        </header>
+    <div class="top-bar">
+        <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="searchInput" class="search-input" placeholder="搜尋商品名稱..." oninput="renderList()">
+        </div>
+        <button class="sort-btn" onclick="toggleSort()">⇅ 排序</button>
+    </div>
 
-        <div class="stats-bar">
-            <div class="stat-group">
-                <div class="stat-item">總項目: <span id="totalItems">0</span></div>
+    <div id="view-home" class="view-section active">
+        <div id="merchGrid" class="card-grid"></div>
+        <div id="emptyState" style="text-align:center; padding:50px; color:#999; display:none;">目前沒有紀錄</div>
+    </div>
+
+    <div id="view-add" class="view-section">
+        <h2 class="page-title" id="pageTitle">新增紀錄</h2>
+        <div class="form-container">
+            <form id="merchForm">
+                <input type="hidden" id="editId">
+                <div class="form-group"><label>商品名稱 <span style="color:red">*</span></label><input type="text" id="name" required placeholder="例如：正規一輯 特別版"></div>
+                
+                <div class="form-row">
+                    <div class="form-col">
+                        <label>分類</label>
+                        <select id="category"><option value="周邊">周邊</option><option value="專輯">專輯</option><option value="小卡">小卡</option><option value="票務">票務</option><option value="其他">其他</option></select>
+                    </div>
+                    <div class="form-col">
+                        <label>購買來源</label>
+                        <input type="text" id="source" placeholder="例: 官網、社團">
+                    </div>
+                </div>
+                
+                <div class="form-group"><label>下單日期 <span style="color:red">*</span></label><input type="date" id="orderDate" required></div>
+                
+                <div class="form-group">
+                    <label>賣家聯絡方式</label>
+                    <div class="form-row" style="margin-bottom:0;">
+                        <div class="form-col"><input type="text" id="contact" placeholder="名稱 (例: 推特@abc)"></div>
+                        <div class="form-col"><input type="url" id="contactLink" placeholder="連結 (選填)"></div>
+                    </div>
+                </div>
+
+                <div class="form-group"><label>付款方式</label>
+                    <select id="paymentType" onchange="toggleTransferFields()">
+                        <option value="Pending">待付款</option>
+                        <option value="COD">貨到付款</option>
+                        <option value="Transfer">銀行匯款</option>
+                    </select>
+                </div>
+
+                <div id="transferFields" class="hidden" style="background:#eee; padding:10px; margin-bottom:15px;">
+                    <div class="form-row"><div class="form-col"><label>匯款日期</label><input type="date" id="transferDate"></div><div class="form-col"><label>匯款金額</label><input type="number" id="transferAmount"></div></div>
+                </div>
+
+                <div class="form-group"><label>費用明細 (NT$)</label>
+                    <div class="info-grid" style="grid-template-columns:1fr 1fr 1fr; background:#f9f9f9; padding:10px; gap:10px;">
+                        <div><label style="text-align:center;">單價</label><input type="number" id="price" style="text-align:right;"></div>
+                        <div><label style="text-align:center;">二補</label><input type="number" id="secondPay" style="text-align:right;"></div>
+                        <div><label style="text-align:center;">國際運費</label><input type="number" id="shipping" style="text-align:right;"></div>
+                    </div>
+                </div>
+
+                <div class="form-group"><label>相關連結</label>
+                    <input type="url" id="link" placeholder="訂購網址..." style="margin-bottom:5px;">
+                    <input type="url" id="reconcileLink" placeholder="對帳表連結..." style="margin-bottom:5px;">
+                    <input type="url" id="sellerLink" placeholder="賣貨便連結...">
+                </div>
+                
+                <div class="form-group"><label>備註</label><textarea id="notes" style="height:60px;"></textarea></div>
+                <div class="form-group">
+                    <label>圖片 (自動壓縮)</label>
+                    <input type="file" id="imageInput" accept="image/*">
+                </div>
+                
+                <button type="submit" class="btn-main" id="submitBtn">儲存紀錄</button>
+                <button type="button" class="btn-main" id="cancelBtn" onclick="resetForm()" style="background:#999; margin-top:10px; display:none;">取消編輯</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="view-settings" class="view-section">
+        <h2 class="page-title">管理</h2>
+        <div class="stats-box"><div>總花費</div><div class="stats-big-num" id="statTotalSpent">NT$ 0</div><div>品項數: <span id="statTotalItems">0</span></div></div>
+        
+        <h3 style="margin-bottom:10px;">Excel 匯入</h3>
+        <div class="settings-group">
+            <button class="btn-backup btn-excel" onclick="downloadTemplate()">📊 下載 Excel 範本 (.xlsx)</button>
+            <div style="position:relative; margin-top:10px;">
+                <button class="btn-backup btn-excel" style="background:#262626;" onclick="document.getElementById('excelInput').click()">📥 匯入 Excel 檔案</button>
+                <input type="file" id="excelInput" onchange="importExcel(this)" accept=".xlsx, .xls, .csv" style="display:none;">
             </div>
-            <div class="stat-item">總支出: <span id="totalSpent">NT$ 0</span></div>
         </div>
 
-        <div class="dashboard">
-            <div class="form-panel">
-                <div class="panel-title">新增紀錄</div>
-                <form id="merchForm">
-                    <div class="form-group">
-                        <label>商品名稱 (必填)</label>
-                        <input type="text" id="name" required placeholder="輸入周邊名稱...">
-                    </div>
-
-                    <div class="row">
-                        <div class="form-group" style="flex:1">
-                            <label>下單日期 (必填)</label>
-                            <input type="date" id="orderDate" required>
-                        </div>
-                        <div class="form-group" style="flex:1">
-                            <label>購買來源</label>
-                            <input type="text" id="source" placeholder="例如: 官網 / 推特">
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>付款方式</label>
-                        <div class="payment-toggle">
-                            <input type="radio" name="paymentType" id="payCOD" value="COD" checked onclick="togglePaymentFields()">
-                            <label for="payCOD" class="radio-label">貨到付款</label>
-                            
-                            <input type="radio" name="paymentType" id="payTransfer" value="Transfer" onclick="togglePaymentFields()">
-                            <label for="payTransfer" class="radio-label">銀行匯款</label>
-                        </div>
-                    </div>
-
-                    <div id="transferFields" class="hidden" style="background: #e8e4de; padding: 10px; margin-bottom: 15px;">
-                        <div class="row">
-                            <div class="form-group" style="flex:1">
-                                <label>匯款日期</label>
-                                <input type="date" id="transferDate">
-                            </div>
-                            <div class="form-group" style="flex:1">
-                                <label>匯款金額</label>
-                                <input type="number" id="transferAmount" placeholder="0">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="form-group" style="flex:1">
-                            <label>商品原價 (必填)</label>
-                            <input type="number" id="price" placeholder="0" required>
-                        </div>
-                        <div class="form-group" style="flex:1">
-                            <label>二補金額</label>
-                            <input type="number" id="secondPay" placeholder="0">
-                        </div>
-                        <div class="form-group" style="flex:1">
-                            <label>國內運費</label>
-                            <input type="number" id="shipping" placeholder="0">
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>訂購連結</label>
-                        <input type="url" id="link" placeholder="原始商品連結...">
-                    </div>
-
-                    <div class="form-group">
-                        <label>賣貨便連結</label>
-                        <input type="url" id="sellerLink" placeholder="賣場/賣貨便連結...">
-                    </div>
-
-                    <div class="form-group">
-                        <label>備註</label>
-                        <textarea id="notes" placeholder="紀錄喊單帳號、交易細節..."></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label>商品圖片 (選填)</label>
-                        <input type="file" id="imageInput" accept="image/*">
-                        <small style="color:#666; display:block; margin-top:5px;">💡 系統會自動壓縮圖片以節省空間</small>
-                    </div>
-
-                    <button type="submit" class="btn-submit">建立紀錄</button>
-                </form>
+        <h3 style="margin-bottom:10px;">備份還原</h3>
+        <div class="settings-group">
+            <button class="btn-backup" onclick="exportData()">⬇ 下載備份 (JSON)</button>
+            <div style="position:relative; margin-top:10px;">
+                <button class="btn-backup" onclick="document.getElementById('jsonInput').click()">⬆ 匯入備份 (JSON)</button>
+                <input type="file" id="jsonInput" onchange="importData(this)" accept=".json" style="display:none;">
             </div>
-
-            <div id="merchList" class="merch-grid">
-                </div>
+            <button class="btn-backup" onclick="clearAllData()" style="background: var(--accent); color:#fff; margin-top:20px;">⚠ 清空資料</button>
         </div>
     </div>
 
     <div id="bulkActions" class="bulk-actions-bar">
-        <div class="bulk-info">已選取 <span id="selectedCount">0</span> 筆</div>
+        <div style="font-size:14px;">已選 <span id="selectedCount">0</span> 筆</div>
         <button class="bulk-btn" onclick="mergeSelectedItems()">🔗 合併訂單</button>
-        <button class="bulk-btn danger" onclick="deleteSelectedItems()">🗑 刪除</button>
-        <button class="bulk-btn" onclick="clearSelection()" style="background:transparent; color:#fff; border:1px solid #fff;">取消</button>
+        <button class="bulk-btn" onclick="clearSelection()" style="background:#666; color:#fff;">取消</button>
+    </div>
+
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="switchView('home', this)"><span class="nav-icon">☰</span>列表</div>
+        <div class="nav-item" onclick="switchView('add', this)"><span class="nav-icon">＋</span>新增</div>
+        <div class="nav-item" onclick="switchView('settings', this)"><span class="nav-icon">⚙</span>管理</div>
     </div>
 
     <script>
-        // 1. 預設圖片設定
-        const DEFAULT_IMG = 'data:image/svg+xml;charset=UTF-8,%3Csvg width%3D%22300%22 height%3D%22200%22 xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 300 200%22 preserveAspectRatio%3D%22none%22%3E%3Crect width%3D%22300%22 height%3D%22200%22 fill%3D%22%23ddd%22%2F%3E%3Ctext x%3D%2250%25%22 y%3D%2250%25%22 dominant-baseline%3D%22middle%22 text-anchor%3D%22middle%22 fill%3D%22%23555%22 font-family%3D%22sans-serif%22%3ENO IMAGE%3C%2Ftext%3E%3C%2Fsvg%3E';
+        // --- 核心變數與初始化 ---
+        const STORAGE_KEY = 'cortis_v7_final';
+        let items = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+        let sortDesc = true;
+        let selectedIds = new Set();
 
-        const form = document.getElementById('merchForm');
-        const merchList = document.getElementById('merchList');
-        const totalItemsEl = document.getElementById('totalItems');
-        const totalSpentEl = document.getElementById('totalSpent');
-        const transferFields = document.getElementById('transferFields');
-        const bulkActionsBar = document.getElementById('bulkActions');
-        const selectedCountEl = document.getElementById('selectedCount');
+        const views = { home: document.getElementById('view-home'), add: document.getElementById('view-add'), settings: document.getElementById('view-settings') };
+        
+        const STATUS_KEYS = ['notArrived', 'pendingShip', 'shipped', 'pickedUp'];
+        const STATUS_LABELS = { notArrived:'未到貨', pendingShip:'待出貨', shipped:'已出貨', pickedUp:'取貨' };
+        const PAYMENT_LABELS = { Pending:'待付款', COD:'貨到付款', Transfer:'銀行匯款' };
 
-        // 設定日期為今天
-        document.getElementById('orderDate').valueAsDate = new Date();
+        window.onload = () => { 
+            renderList(); updateStats(); document.getElementById('orderDate').valueAsDate = new Date();
+            if(typeof XLSX === 'undefined') console.warn('Excel library not loaded. Check internet.');
+        };
 
-        // 讀取資料
-        let merchData = [];
-        let selectedIds = new Set(); 
-
-        // 安全讀取資料 (防止舊資料格式錯誤)
-        try {
-            merchData = JSON.parse(localStorage.getItem('cortisTrackerDataV2')) || [];
-        } catch (e) {
-            console.error("讀取資料失敗", e);
-            merchData = [];
+        function switchView(view, el) {
+            Object.values(views).forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            views[view].classList.add('active'); el.classList.add('active');
+            if(view === 'home') renderList();
+            window.scrollTo(0,0);
         }
 
-        // 初始化
-        function init() {
-            renderMerch();
-            updateStats();
+        // --- 列表渲染 ---
+        function renderList() {
+            const grid = document.getElementById('merchGrid');
+            grid.innerHTML = '';
+            const key = document.getElementById('searchInput').value.toLowerCase();
+            let filtered = items.filter(i => (i.name||'').toLowerCase().includes(key));
+            filtered.sort((a,b) => sortDesc ? new Date(b.orderDate)-new Date(a.orderDate) : new Date(a.orderDate)-new Date(b.orderDate));
+            document.getElementById('emptyState').style.display = filtered.length ? 'none' : 'block';
+            
+            filtered.forEach(item => {
+                const total = (item.price||0) + (item.secondPay||0) + (item.shipping||0);
+                
+                let checksHtml = '';
+                STATUS_KEYS.forEach(k => {
+                    const checked = item.status[k] ? 'checked' : '';
+                    checksHtml += `<div class="check-item ${checked}" onclick="toggleStatus(${item.id}, '${k}')"><span class="check-box"></span> ${STATUS_LABELS[k]}</div>`;
+                });
+
+                let contactDisplay = item.contact || '-';
+                if(item.contactLink) contactDisplay = `<a class="contact-link" onclick="window.open('${item.contactLink}', '_blank')">${item.contact || '連結'}</a>`;
+                
+                let groupHtml = item.group ? `<span class="group-tag">📦 ${item.group} <span class="remove-group" onclick="ungroupItem(${item.id})">×</span></span>` : '';
+                const isSelected = selectedIds.has(item.id) ? 'selected' : '';
+                const checkMark = selectedIds.has(item.id) ? '✔' : '';
+
+                const openUrl = (url) => url ? `window.open('${url}','_blank')` : '';
+                const btnStyle = (url) => url ? '' : 'color:#ccc; cursor:default;';
+
+                const card = document.createElement('div');
+                card.className = `merch-card ${isSelected}`;
+                card.innerHTML = `
+                    <div class="card-select-overlay" onclick="toggleSelection(${item.id})"><div class="custom-checkbox">${checkMark}</div></div>
+                    <div class="card-status-bar">${STATUS_KEYS.map(k => `<div class="status-segment ${item.status[k]?'active':''}"></div>`).join('')}</div>
+                    <div class="card-header">${item.imageSrc ? `<img src="${item.imageSrc}" class="card-thumb">` : `<div class="card-thumb"></div>`}
+                        <div class="card-title-group">
+                            <div>${groupHtml}<span class="category-tag">${item.category||'周邊'}</span></div>
+                            <div class="card-title">${item.name}</div>
+                            <div class="card-subtitle">${item.orderDate} · ${item.source||''}</div>
+                        </div>
+                    </div>
+                    <div class="info-grid">
+                        <span class="label">賣家聯絡</span><span class="value" style="font-size:13px;">${contactDisplay}</span>
+                        <span class="label">付款方式</span><span class="value" style="font-size:13px;">${PAYMENT_LABELS[item.paymentType] || item.paymentType}</span>
+                        <span class="label">單價</span><span class="value">${item.price||0}</span>
+                        <span class="label">二補</span><span class="value">${item.secondPay||0}</span>
+                        <span class="label">國際運費</span><span class="value">${item.shipping||0}</span>
+                        <span class="label" style="font-weight:900; color:#000;">總計</span><span class="value highlight">NT$ ${total}</span>
+                    </div>
+                    <div class="checklist-row">${checksHtml}</div>
+                    <div class="card-actions">
+                        <button class="action-btn" onclick="editItem(${item.id})">編輯</button>
+                        <button class="action-btn" onclick="${openUrl(item.link)}" style="${btnStyle(item.link)}">訂購</button>
+                        <button class="action-btn" onclick="${openUrl(item.reconcileLink)}" style="${btnStyle(item.reconcileLink)}">對帳表</button>
+                        <button class="action-btn text-red" onclick="deleteItem(${item.id})">刪除</button>
+                    </div>`;
+                grid.appendChild(card);
+            });
+            updateBulkBar();
         }
 
-        // 切換匯款欄位顯示
-        function togglePaymentFields() {
-            const isTransfer = document.getElementById('payTransfer').checked;
-            const fields = document.getElementById('transferFields');
-            if (isTransfer) {
-                fields.classList.remove('hidden');
-            } else {
-                fields.classList.add('hidden');
-            }
-        }
-        window.togglePaymentFields = togglePaymentFields; // 確保 HTML 可以呼叫
-
-        // --- 圖片壓縮功能 (修正版) ---
-        const getBase64 = (file) => {
+        // --- 圖片壓縮功能 (新) ---
+        function compressImage(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.readAsDataURL(file);
@@ -589,294 +342,155 @@
                     const img = new Image();
                     img.src = event.target.result;
                     img.onload = () => {
-                        // 建立 Canvas 進行壓縮
                         const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 600; // 限制最大寬度 600px
-                        const scaleSize = MAX_WIDTH / img.width;
-                        
-                        // 如果圖片原本就很小，就不縮放
-                        if (scaleSize >= 1) {
-                            resolve(event.target.result);
-                            return;
-                        }
-
-                        canvas.width = MAX_WIDTH;
-                        canvas.height = img.height * scaleSize;
                         const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        const maxWidth = 800; // 限制最大寬度
+                        const scale = maxWidth / img.width;
+                        const width = (scale < 1) ? maxWidth : img.width;
+                        const height = (scale < 1) ? img.height * scale : img.height;
                         
-                        // 輸出壓縮後的圖片 (品質 0.7)
-                        resolve(canvas.toDataURL('image/jpeg', 0.7));
+                        canvas.width = width;
+                        canvas.height = height;
+                        ctx.drawImage(img, 0, 0, width, height);
+                        // 輸出壓縮後的 base64，品質 0.7
+                        resolve(canvas.toDataURL('image/jpeg', 0.7)); 
                     };
-                    img.onerror = (error) => reject(error);
+                    img.onerror = (e) => reject(e);
                 };
-                reader.onerror = error => reject(error);
+                reader.onerror = (e) => reject(e);
             });
         }
 
-        // 新增商品 (主功能)
+        // --- 表單儲存 ---
+        const form = document.getElementById('merchForm');
         form.addEventListener('submit', async (e) => {
-            e.preventDefault(); // 阻止表單跳轉
-
-            // 顯示載入中...
-            const btn = form.querySelector('.btn-submit');
-            const originalText = btn.innerText;
-            btn.innerText = "處理中...";
-            btn.disabled = true;
-
+            e.preventDefault();
             try {
-                const imageInput = document.getElementById('imageInput');
-                let imageSrc = DEFAULT_IMG;
+                const editId = document.getElementById('editId').value;
+                const imgInput = document.getElementById('imageInput');
+                let imgData = null;
                 
-                // 如果有上傳圖片，進行處理
-                if (imageInput.files.length > 0) {
-                    imageSrc = await getBase64(imageInput.files[0]);
+                // 使用壓縮函式
+                if(imgInput.files[0]) {
+                    try {
+                        imgData = await compressImage(imgInput.files[0]);
+                    } catch(err) {
+                        alert('❌ 圖片處理失敗'); return;
+                    }
                 }
 
-                const paymentType = document.querySelector('input[name="paymentType"]:checked').value;
-                
-                const newMerch = {
-                    id: Date.now(),
-                    name: document.getElementById('name').value,
-                    orderDate: document.getElementById('orderDate').value,
-                    source: document.getElementById('source').value,
-                    paymentType: paymentType,
-                    transferDate: document.getElementById('transferDate').value,
-                    transferAmount: Number(document.getElementById('transferAmount').value),
-                    price: Number(document.getElementById('price').value),
-                    secondPay: Number(document.getElementById('secondPay').value),
-                    shipping: Number(document.getElementById('shipping').value),
-                    link: document.getElementById('link').value,
-                    sellerLink: document.getElementById('sellerLink').value,
-                    notes: document.getElementById('notes').value,
-                    imageSrc: imageSrc,
-                    group: null,
-                    status: {
-                        ordered: true,
-                        paid: paymentType === 'Transfer',
-                        shipped: false,
-                        secondPayDone: false,
-                        arrived: false,
-                        received: false
-                    },
-                    refund: { isRefunded: false, date: '', amount: 0 }
+                const rawData = {
+                    name: document.getElementById('name').value, category: document.getElementById('category').value,
+                    orderDate: document.getElementById('orderDate').value, 
+                    source: document.getElementById('source').value, // 這裡現在找得到 ID 了
+                    contact: document.getElementById('contact').value, contactLink: document.getElementById('contactLink').value,
+                    paymentType: document.getElementById('paymentType').value,
+                    transferDate: document.getElementById('transferDate').value, transferAmount: Number(document.getElementById('transferAmount').value),
+                    price: Number(document.getElementById('price').value), secondPay: Number(document.getElementById('secondPay').value),
+                    shipping: Number(document.getElementById('shipping').value), 
+                    link: document.getElementById('link').value, 
+                    reconcileLink: document.getElementById('reconcileLink').value,
+                    sellerLink: document.getElementById('sellerLink').value, 
+                    notes: document.getElementById('notes').value
                 };
 
-                merchData.unshift(newMerch);
-                
-                // 嘗試儲存
-                try {
-                    localStorage.setItem('cortisTrackerDataV2', JSON.stringify(merchData));
-                    renderMerch();
-                    updateStats();
-                    form.reset();
-                    document.getElementById('orderDate').valueAsDate = new Date();
-                    togglePaymentFields();
-                    alert("✅ 建立成功！");
-                } catch (storageError) {
-                    merchData.shift(); // 失敗則移除
-                    alert("❌ 儲存失敗：圖片可能還是太大，或是儲存空間已滿。請試著不要上傳圖片。");
-                    console.error(storageError);
+                if(editId) {
+                    const idx = items.findIndex(i => i.id == editId);
+                    if(idx > -1) items[idx] = { ...items[idx], ...rawData, imageSrc: imgData || items[idx].imageSrc };
+                } else {
+                    items.unshift({ id: Date.now(), ...rawData, imageSrc: imgData||'', group:null, status: {notArrived:true, pendingShip:false, shipped:false, pickedUp:false} });
                 }
+                
+                saveData(); resetForm(); 
+                switchView('home', document.querySelectorAll('.nav-item')[0]);
 
             } catch (error) {
-                alert("❌ 發生未知錯誤：" + error.message);
+                alert("❌ 儲存發生錯誤: " + error.message);
                 console.error(error);
-            } finally {
-                btn.innerText = originalText;
-                btn.disabled = false;
             }
         });
 
-        // 刪除單一
-        function deleteMerch(id) {
-            if(confirm('確定要刪除這筆紀錄嗎？')) {
-                merchData = merchData.filter(item => item.id !== id);
-                if (selectedIds.has(id)) selectedIds.delete(id);
-                saveAndRender();
-            }
+        // --- 輔助功能 ---
+        function toggleSelection(id) { if(selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id); renderList(); }
+        function clearSelection() { selectedIds.clear(); renderList(); }
+        function updateBulkBar() { const bar = document.getElementById('bulkActions'); if(selectedIds.size > 0) { bar.classList.add('active'); document.getElementById('selectedCount').innerText = selectedIds.size; } else { bar.classList.remove('active'); } }
+        function mergeSelectedItems() { const name = prompt("輸入併單名稱:"); if(name) { items.forEach(i => { if(selectedIds.has(i.id)) i.group = name; }); clearSelection(); saveData(); renderList(); } }
+        function ungroupItem(id) { if(confirm("移除併單？")) { const i = items.find(x => x.id === id); if(i) { i.group = null; saveData(); renderList(); } } }
+        function toggleSort() { sortDesc = !sortDesc; renderList(); }
+        function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); updateStats(); }
+        function updateStats() { const total = items.reduce((acc, i) => acc + (i.price||0) + (i.secondPay||0) + (i.shipping||0), 0); document.getElementById('statTotalSpent').innerText = `NT$ ${total.toLocaleString()}`; document.getElementById('statTotalItems').innerText = items.length; }
+
+        function editItem(id) {
+            const item = items.find(i => i.id === id); if(!item) return;
+            document.getElementById('editId').value = item.id; document.getElementById('name').value = item.name;
+            document.getElementById('category').value = item.category; document.getElementById('orderDate').value = item.orderDate;
+            document.getElementById('source').value = item.source || ''; 
+            document.getElementById('contact').value = item.contact;
+            document.getElementById('contactLink').value = item.contactLink || '';
+            document.getElementById('paymentType').value = item.paymentType; document.getElementById('transferDate').value = item.transferDate;
+            document.getElementById('transferAmount').value = item.transferAmount; document.getElementById('price').value = item.price;
+            document.getElementById('secondPay').value = item.secondPay; document.getElementById('shipping').value = item.shipping;
+            document.getElementById('link').value = item.link; document.getElementById('reconcileLink').value = item.reconcileLink || '';
+            document.getElementById('sellerLink').value = item.sellerLink; document.getElementById('notes').value = item.notes;
+            toggleTransferFields();
+            document.getElementById('pageTitle').innerText = "編輯紀錄"; document.getElementById('submitBtn').innerText = "更新資料"; document.getElementById('cancelBtn').style.display = 'block';
+            switchView('add', document.querySelectorAll('.nav-item')[1]);
         }
+        function resetForm() { form.reset(); document.getElementById('editId').value = ''; document.getElementById('pageTitle').innerText="新增紀錄"; document.getElementById('submitBtn').innerText="儲存紀錄"; document.getElementById('cancelBtn').style.display='none'; toggleTransferFields(); }
+        function deleteItem(id) { if(confirm('刪除？')) { items = items.filter(i => i.id !== id); if(selectedIds.has(id)) selectedIds.delete(id); saveData(); renderList(); } }
+        function toggleStatus(id, k) { const i = items.find(x => x.id === id); if(i) { i.status[k] = !i.status[k]; saveData(); renderList(); } }
+        function toggleTransferFields() { document.getElementById('transferFields').style.display = document.getElementById('paymentType').value === 'Transfer' ? 'block' : 'none'; }
+        
+        function exportData() { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(items,null,2)],{type:'application/json'})); a.download = `backup_${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
+        function importData(input) { const f = input.files[0]; if(!f) return; const r = new FileReader(); r.onload=e=>{ try{ items=JSON.parse(e.target.result); saveData(); renderList(); alert('匯入成功'); }catch{ alert('錯誤'); } }; r.readAsText(f); }
+        function clearAllData() { if(confirm('清空？')) { items=[]; saveData(); renderList(); } }
 
-        // 批量刪除
-        function deleteSelectedItems() {
-            if(confirm(`確定要刪除選取的 ${selectedIds.size} 筆紀錄嗎？`)) {
-                merchData = merchData.filter(item => !selectedIds.has(item.id));
-                clearSelection();
-                saveAndRender();
-            }
+        // --- Excel V7 (修正版) ---
+        function downloadTemplate() {
+            if(typeof XLSX === 'undefined') { alert('Excel 工具未載入，請檢查網路'); return; }
+            
+            // 定義資料
+            const data = [{"商品名稱":"範例","分類":"周邊","下單日期":"2025-01-01","購買來源":"官網","賣家名稱":"@abc","賣家連結":"","付款方式 (待付款/貨到付款/銀行匯款)":"銀行匯款","匯款日期":"2025-01-01","匯款金額":500,"單價":500,"二補":0,"國際運費":60,"訂購連結":"","對帳表連結":"","賣貨便連結":"","備註":""}];
+            
+            // 正確建立 Workbook
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(data);
+            XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+            
+            // 下載
+            XLSX.writeFile(wb, "CORTIS_V7範本.xlsx");
         }
-
-        // 退款登記
-        function registerRefund(id) {
-            const item = merchData.find(i => i.id === id);
-            if(item.refund.isRefunded) {
-                if(confirm('取消退款狀態？')) {
-                    item.refund.isRefunded = false;
-                    item.refund.amount = 0;
-                    item.refund.date = '';
-                    saveAndRender();
-                }
-                return;
-            }
-            const amount = prompt("請輸入退款金額:", item.price);
-            if(amount === null) return;
-            const date = prompt("請輸入退款日期 (YYYY-MM-DD):", new Date().toISOString().split('T')[0]);
-            item.refund.isRefunded = true;
-            item.refund.amount = Number(amount);
-            item.refund.date = date;
-            saveAndRender();
+        
+        function importExcel(input) {
+            if(typeof XLSX === 'undefined') { alert('Excel 工具未載入'); input.value=''; return; }
+            const file = input.files[0]; if(!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const workbook = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
+                    const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                    if(json.length === 0) throw new Error("無資料");
+                    const newItems = json.map(row => {
+                        let pType = "Pending"; const pRaw = row["付款方式 (待付款/貨到付款/銀行匯款)"] || "";
+                        if(pRaw.includes("貨到")) pType = "COD"; else if(pRaw.includes("匯款")) pType = "Transfer";
+                        return {
+                            id: Date.now() + Math.floor(Math.random()*100000),
+                            name: row["商品名稱"] || "未命名", category: row["分類"] || "周邊",
+                            orderDate: row["下單日期"] || new Date().toISOString().split('T')[0],
+                            source: row["購買來源"] || "", contact: row["賣家名稱"] || "", contactLink: row["賣家連結"] || "",
+                            paymentType: pType, transferDate: row["匯款日期"] || "",
+                            transferAmount: Number(row["匯款金額"])||0, price: Number(row["單價"])||0,
+                            secondPay: Number(row["二補"])||0, shipping: Number(row["國際運費"])||0,
+                            link: row["訂購連結"]||"", reconcileLink: row["對帳表連結"]||"", sellerLink: row["賣貨便連結"]||"", notes: row["備註"]||"",
+                            imageSrc: "", group: null, status: { notArrived:true, pendingShip:false, shipped:false, pickedUp:false }
+                        };
+                    });
+                    items = [...newItems, ...items]; saveData(); renderList(); alert(`🎉 匯入 ${newItems.length} 筆成功`);
+                } catch (error) { alert("❌ 失敗: " + error.message); } 
+                finally { input.value = ''; }
+            };
+            reader.readAsArrayBuffer(file);
         }
-
-        // 更新勾選狀態
-        function toggleStatus(id, key) {
-            const item = merchData.find(i => i.id === id);
-            if(item) {
-                item.status[key] = !item.status[key];
-                saveAndRender();
-            }
-        }
-
-        // --- 選取與合併功能 ---
-        function toggleSelection(id) {
-            if(selectedIds.has(id)) selectedIds.delete(id);
-            else selectedIds.add(id);
-            renderSelectionUI();
-        }
-
-        function clearSelection() {
-            selectedIds.clear();
-            renderSelectionUI();
-        }
-
-        function renderSelectionUI() {
-            const cards = document.querySelectorAll('.merch-card');
-            cards.forEach(card => {
-                const id = Number(card.dataset.id);
-                const checkbox = card.querySelector('.custom-checkbox');
-                if(selectedIds.has(id)) {
-                    card.classList.add('selected');
-                    checkbox.innerHTML = '✔';
-                } else {
-                    card.classList.remove('selected');
-                    checkbox.innerHTML = '';
-                }
-            });
-            if(selectedIds.size > 0) {
-                bulkActionsBar.classList.add('active');
-                selectedCountEl.innerText = selectedIds.size;
-            } else {
-                bulkActionsBar.classList.remove('active');
-            }
-        }
-
-        function mergeSelectedItems() {
-            if(selectedIds.size < 2) {
-                alert("請至少選擇 2 筆訂單進行合併");
-                return;
-            }
-            const groupName = prompt("請輸入合併群組名稱 (例如: 12月集運):");
-            if(groupName) {
-                merchData.forEach(item => {
-                    if(selectedIds.has(item.id)) item.group = groupName;
-                });
-                alert(`合併完成！群組: ${groupName}`);
-                clearSelection();
-                saveAndRender();
-            }
-        }
-
-        function ungroupItem(id) {
-            const item = merchData.find(i => i.id === id);
-            if(confirm(`將 "${item.name}" 從群組移除？`)) {
-                item.group = null;
-                saveAndRender();
-            }
-        }
-
-        // 儲存並渲染
-        function saveAndRender() {
-            try {
-                localStorage.setItem('cortisTrackerDataV2', JSON.stringify(merchData));
-                renderMerch();
-                renderSelectionUI();
-                updateStats();
-            } catch (e) {
-                alert("儲存失敗！可能是容量滿了。");
-                console.error(e);
-            }
-        }
-
-        // 渲染列表
-        function renderMerch() {
-            merchList.innerHTML = '';
-            merchData.forEach(item => {
-                const totalCost = item.price + item.secondPay + item.shipping;
-                const refundHtml = item.refund.isRefunded 
-                    ? `<div class="refund-badge">⚠ 已退款: NT$ ${item.refund.amount}</div>` 
-                    : '';
-                const groupHtml = item.group 
-                    ? `<div class="group-tag">📦 ${item.group} <span class="remove-group" onclick="event.stopPropagation(); ungroupItem(${item.id})">×</span></div>` 
-                    : '';
-
-                const card = document.createElement('div');
-                card.className = `merch-card ${item.refund.isRefunded ? 'refunded' : ''}`;
-                card.dataset.id = item.id;
-                
-                // 狀態檢查列表
-                const steps = [
-                    { key: 'ordered', label: '下單' },
-                    { key: 'paid', label: item.paymentType === 'Transfer' ? '已匯' : '填單' },
-                    { key: 'shipped', label: '發貨' },
-                    { key: 'secondPayDone', label: '二補' },
-                    { key: 'arrived', label: '抵台' },
-                    { key: 'received', label: '領貨' }
-                ];
-
-                let checklistHtml = '<div class="progress-checklist">';
-                steps.forEach(step => {
-                    const isChecked = item.status[step.key] ? 'checked' : '';
-                    checklistHtml += `
-                        <div class="check-item ${isChecked}" onclick="toggleStatus(${item.id}, '${step.key}')">
-                            <span class="check-box"></span>${step.label}
-                        </div>`;
-                });
-                checklistHtml += '</div>';
-
-                let paymentInfo = item.paymentType === 'Transfer' ? `匯款 NT$${item.transferAmount}` : `貨到付款`;
-
-                card.innerHTML = `
-                    <div class="card-select-overlay" onclick="toggleSelection(${item.id})"><div class="custom-checkbox"></div></div>
-                    <div class="card-img-wrap"><img src="${item.imageSrc}" class="merch-img"></div>
-                    <div class="card-body">
-                        <div class="card-header">
-                            <div><h3 class="item-name">${item.name}</h3>${groupHtml}<div class="order-date">${item.orderDate}</div></div>
-                        </div>
-                        <div class="finance-block">
-                            <div class="finance-row"><span>付款</span><span>${paymentInfo}</span></div>
-                            <div class="finance-total">總計: NT$ ${totalCost}</div>
-                            ${refundHtml}
-                        </div>
-                        ${checklistHtml}
-                        <div class="card-actions">
-                            <button class="action-btn btn-refund" onclick="registerRefund(${item.id})">退款</button>
-                            <button class="action-btn" onclick="deleteMerch(${item.id})">刪除</button>
-                        </div>
-                    </div>
-                `;
-                merchList.appendChild(card);
-            });
-        }
-
-        // PWA Service Worker 註冊
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                .then(reg => console.log('Service Worker registered'))
-                .catch(err => console.log('Service Worker failed', err));
-            });
-        }
-
-        init();
     </script>
 </body>
 </html>
