@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CORTIS (V9 雲端版)</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon.png">
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
@@ -133,7 +136,6 @@
 </head>
 <body>
 
-    <!-- 🔒 密碼鎖畫面 -->
     <div id="lockScreen">
         <div class="pin-container">
             <div class="pin-title">LOCKED</div>
@@ -143,7 +145,6 @@
         </div>
     </div>
 
-    <!-- 頂部工具區 -->
     <div class="top-container">
         <div class="search-row">
             <div class="search-box">
@@ -160,7 +161,6 @@
         </div>
     </div>
 
-    <!-- 列表頁 -->
     <div id="view-home" class="view-section active">
         <div id="currentMonthStats" style="text-align:center; padding:10px; font-size:14px; color:#666; display:none;">
             本月總計: <span id="monthTotal" style="color:#000; font-weight:bold;">NT$ 0</span>
@@ -169,7 +169,6 @@
         <div id="emptyState" style="text-align:center; padding:50px; color:#999; display:none;">目前沒有紀錄</div>
     </div>
 
-    <!-- 新增頁 -->
     <div id="view-add" class="view-section">
         <h2 class="page-title" id="pageTitle">新增紀錄</h2>
         <div class="form-container">
@@ -193,7 +192,6 @@
         </div>
     </div>
 
-    <!-- 管理頁 -->
     <div id="view-settings" class="view-section">
         <h2 class="page-title">管理</h2>
         <div class="stats-box"><div>總花費</div><div class="stats-big-num" id="statTotalSpent">NT$ 0</div><div>品項數: <span id="statTotalItems">0</span></div></div>
@@ -226,9 +224,9 @@
 
     <script>
         // --- 設定與變數 ---
-        // 請確認這個 URL 是您提供的 Google Apps Script 部署網址
-        const API_URL = "https://script.google.com/macros/s/AKfycbyeGblocTD-g8e3yUbG0YSMBRbT-6Uwfu2gF09Bjgqt32C_GIjBwnl-Ni2-cfDwXQfl4g/exec";
-        const APP_PIN = "0000"; // 預設密碼
+        // ✅ 已更新為您的專屬連結
+        const API_URL = "https://script.google.com/macros/s/AKfycby0gypbeZL48qOwibWwa-h-J96DFtlYcClSebcEi-8UjzEG4U7WzQayAD2Fz-xPuuN_5Q/exec";
+        const APP_PIN = "0000"; // 預設密碼 (請自行修改)
         const STORAGE_KEY = 'cortis_v9_data';
         
         let items = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
@@ -243,6 +241,11 @@
 
         // --- 初始化 ---
         window.onload = () => {
+            // PWA 註冊
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW failed', err));
+            }
+
             // PIN Lock Logic
             const pinInput = document.getElementById('pinInput');
             pinInput.focus();
@@ -274,8 +277,6 @@
                 const cloudData = await res.json();
                 
                 if(Array.isArray(cloudData) && cloudData.length > 0) {
-                    // 簡單合併邏輯：雲端有資料就覆蓋本地 (您也可以改成更複雜的合併)
-                    // 這裡採用：如果雲端資料筆數比本地多，或本地是空的，就用雲端的
                     if(cloudData.length >= items.length || items.length === 0) {
                         items = cloudData;
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
