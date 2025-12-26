@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CORTIS (V16 全選版)</title>
+    <title>CORTIS (V17 iPad優化版)</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
@@ -42,14 +42,16 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
         .search-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
-        .filter-row { display: flex; gap: 10px; align-items: center; }
+        .filter-row { display: flex; gap: 10px; align-items: center; overflow-x: auto; padding-bottom: 5px; }
         .search-box { flex: 1; position: relative; }
         .search-input { width: 100%; padding: 10px 10px 10px 35px; border: 1px solid #999; border-radius: 4px; background: var(--card-bg); font-size: 14px; height: 40px; }
         .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); opacity: 0.5; }
         .sort-btn { background: var(--text-main); color: var(--bg-color); border: none; padding: 0 15px; border-radius: 4px; font-size: 13px; font-weight: bold; height: 40px; white-space: nowrap; cursor: pointer; }
-        .month-select { flex: 1; padding: 0 8px; border: 2px solid var(--text-main); border-radius: 4px; background: #fff; font-weight: bold; font-size: 13px; color: var(--text-main); height: 40px; }
+        
+        /* 篩選器樣式 */
+        .filter-select { flex: 1; padding: 0 8px; border: 2px solid var(--text-main); border-radius: 4px; background: #fff; font-weight: bold; font-size: 13px; color: var(--text-main); height: 40px; min-width: 100px; }
 
-        .sync-status { width: 10px; height: 10px; border-radius: 50%; background: #ccc; display: inline-block; margin-right: 5px; }
+        .sync-status { width: 10px; height: 10px; border-radius: 50%; background: #ccc; display: inline-block; margin-right: 5px; flex-shrink: 0; }
         .sync-status.ok { background: #2ecc71; box-shadow: 0 0 5px #2ecc71; }
         .sync-status.loading { background: #f1c40f; animation: pulse 1s infinite; }
         .sync-status.error { background: #e74c3c; }
@@ -63,14 +65,16 @@
         }
         .summary-val { color: var(--text-main); font-weight: 900; font-family: monospace; font-size: 15px; }
 
-        .view-section { display: none; padding: 20px; max-width: 1000px; margin: 0 auto; animation: fadeIn 0.2s ease; }
+        .view-section { display: none; padding: 20px; max-width: 1200px; margin: 0 auto; animation: fadeIn 0.2s ease; }
         .view-section.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         
-        h2.page-title { font-size: 1.8rem; font-weight: 900; margin: 0 0 20px 0; border-bottom: var(--border); padding-bottom: 10px; }
-        
+        h2.page-title { font-size: 1.8rem; font-weight: 900; margin: 0 0 20px 0; border-bottom: var(--border); padding-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
+        .back-btn { font-size: 14px; background: transparent; border: 1px solid #999; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+
+        /* 卡片網格 (iPad 優化: 4欄) */
         .card-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
-        @media (min-width: 768px) { .card-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (min-width: 768px) { .card-grid { grid-template-columns: repeat(4, 1fr); } } 
         
         .merch-card { background: var(--card-bg); border: var(--border); display: flex; flex-direction: column; position: relative; transition: all 0.2s; }
         .merch-card.selected { border-color: var(--select-color); box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.3); }
@@ -135,9 +139,15 @@
         .info-input-item { flex: 1; text-align: center; }
         .info-input-item input { text-align: right; }
 
-        /* 設定頁 */
-        .stats-box { background: var(--text-main); color: #fff; padding: 20px; margin-bottom: 20px; text-align: center; }
-        .stats-big-num { font-size: 32px; font-weight: 900; font-family: monospace; }
+        /* 設定頁 - 選單按鈕 */
+        .settings-menu-btn {
+            display: flex; justify-content: space-between; align-items: center;
+            width: 100%; padding: 15px; background: #fff; border: 1px solid #ccc;
+            margin-bottom: 10px; font-weight: bold; font-size: 16px; cursor: pointer;
+            text-align: left;
+        }
+        .settings-menu-btn:after { content: '>'; color: #999; }
+
         .settings-group { background: #fff; border: var(--border); padding: 20px; margin-bottom: 20px; }
         .btn-backup { background: #eee; border: 1px solid #ccc; padding: 12px; width: 100%; margin-bottom: 10px; font-weight: bold; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .btn-excel { background: #27ae60; color: white; border: none; }
@@ -184,8 +194,18 @@
             <button class="sort-btn" onclick="toggleSort()">⇅</button>
         </div>
         <div class="filter-row">
-            <select id="monthFilter" class="month-select" onchange="renderList()">
+            <!-- 月份篩選 -->
+            <select id="monthFilter" class="filter-select" onchange="renderList()">
                 <option value="all">📅 所有月份</option>
+            </select>
+            <!-- 分類篩選 (新增) -->
+            <select id="categoryFilter" class="filter-select" onchange="renderList()">
+                <option value="all">📂 所有分類</option>
+                <option value="周邊">周邊</option>
+                <option value="專輯">專輯</option>
+                <option value="小卡">小卡</option>
+                <option value="票務">票務</option>
+                <option value="其他">其他</option>
             </select>
             <div id="syncIndicator" class="sync-status" title="雲端同步狀態"></div>
         </div>
@@ -247,7 +267,7 @@
                     <div class="info-input-grid">
                         <div class="info-input-item"><label>單價</label><input type="number" id="price"></div>
                         <div class="info-input-item"><label>二補</label><input type="number" id="secondPay"></div>
-                        <div class="info-input-item"><label>運費</label><input type="number" id="shipping"></div>
+                        <div class="info-input-item"><label>國內運費</label><input type="number" id="shipping"></div>
                     </div>
                 </div>
 
@@ -260,10 +280,17 @@
         </div>
     </div>
 
+    <!-- 管理頁 (主選單) -->
     <div id="view-settings" class="view-section">
         <h2 class="page-title">管理</h2>
         
-        <h3 style="margin-bottom:10px;">資料匯入/備份</h3>
+        <button class="settings-menu-btn" onclick="openSubPage('data')">📂 資料匯入 / 備份</button>
+        <button class="settings-menu-btn" onclick="openSubPage('security')">🔒 安全性設定</button>
+    </div>
+
+    <!-- 資料匯入/備份 子頁面 -->
+    <div id="view-settings-data" class="view-section">
+        <h2 class="page-title"><button class="back-btn" onclick="openSubPage('main')">←</button> 資料管理</h2>
         <div class="settings-group">
             <button class="btn-backup btn-excel" onclick="downloadTemplate()">📊 下載 Excel 範本</button>
             <div style="position:relative; margin-top:10px;"><button class="btn-backup btn-excel" style="background:#262626;" onclick="document.getElementById('excelInput').click()">📥 匯入 Excel</button><input type="file" id="excelInput" onchange="importExcel(this)" accept=".xlsx, .xls, .csv" style="display:none;"></div>
@@ -273,8 +300,11 @@
             <button class="btn-backup" onclick="forceCloudSync()" style="background:#3498db; color:fff; margin-top:20px;">☁ 強制雲端同步</button>
             <button class="btn-backup" onclick="clearAllData()" style="background:var(--accent); color:#fff; margin-top:10px;">⚠ 清空資料</button>
         </div>
+    </div>
 
-        <h3 style="margin:20px 0 10px 0;">安全性</h3>
+    <!-- 安全性 子頁面 -->
+    <div id="view-settings-security" class="view-section">
+        <h2 class="page-title"><button class="back-btn" onclick="openSubPage('main')">←</button> 安全性</h2>
         <div class="settings-group">
             <div class="toggle-switch">
                 <span>啟用 PIN 碼鎖定</span>
@@ -304,8 +334,8 @@
 
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbyeGblocTD-g8e3yUbG0YSMBRbT-6Uwfu2gF09Bjgqt32C_GIjBwnl-Ni2-cfDwXQfl4g/exec";
-        const STORAGE_KEY = 'cortis_v16_data';
-        const SETTINGS_KEY = 'cortis_v16_settings';
+        const STORAGE_KEY = 'cortis_v17_data';
+        const SETTINGS_KEY = 'cortis_v17_settings';
         
         let items = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
         let appSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { pinEnabled: false, pin: "0000" };
@@ -314,7 +344,13 @@
         let selectedIds = new Set();
         let isSyncing = false;
 
-        const views = { home: document.getElementById('view-home'), add: document.getElementById('view-add'), settings: document.getElementById('view-settings') };
+        const views = { 
+            home: document.getElementById('view-home'), 
+            add: document.getElementById('view-add'), 
+            settings: document.getElementById('view-settings'),
+            settingsData: document.getElementById('view-settings-data'),
+            settingsSecurity: document.getElementById('view-settings-security')
+        };
         const STATUS_KEYS = ['notArrived', 'pendingShip', 'shipped', 'pickedUp'];
         const STATUS_LABELS = { notArrived:'未到貨', pendingShip:'待出貨', shipped:'已出貨', pickedUp:'取貨' };
         const PAYMENT_LABELS = { Pending:'待付款', COD:'貨到付款', Transfer:'銀行匯款' };
@@ -367,6 +403,7 @@
             document.getElementById('newPinInput').value = '';
         }
 
+        // --- 表單儲存 (修復 ID 與 編輯) ---
         const form = document.getElementById('merchForm');
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -399,7 +436,7 @@
                 };
 
                 if(editId) {
-                    const idx = items.findIndex(i => i.id == editId);
+                    const idx = items.findIndex(i => i.id == editId); // 注意：使用 loose equality == 避免 string/number 差異
                     if(idx > -1) {
                         items[idx] = { ...items[idx], ...rawData };
                         if(imgData) items[idx].imageSrc = imgData;
@@ -459,11 +496,21 @@
             } catch (e) { alert("❌ 儲存空間不足"); }
         }
 
+        // --- 介面導航 ---
         function switchView(view, el) {
             Object.values(views).forEach(v => v.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            views[view].classList.add('active'); el.classList.add('active');
+            views[view].classList.add('active'); 
+            if(el) el.classList.add('active');
             if(view === 'home') renderList();
+            window.scrollTo(0,0);
+        }
+
+        function openSubPage(page) {
+            Object.values(views).forEach(v => v.classList.remove('active'));
+            if(page === 'main') views.settings.classList.add('active');
+            else if(page === 'data') views.settingsData.classList.add('active');
+            else if(page === 'security') views.settingsSecurity.classList.add('active');
             window.scrollTo(0,0);
         }
 
@@ -487,11 +534,15 @@
             const grid = document.getElementById('merchGrid'); grid.innerHTML = '';
             const keyword = document.getElementById('searchInput').value.toLowerCase();
             const monthVal = document.getElementById('monthFilter').value;
+            const catVal = document.getElementById('categoryFilter').value;
+
             let filtered = items.filter(i => {
                 const matchK = (i.name||'').toLowerCase().includes(keyword);
                 const matchM = monthVal === 'all' || i.orderDate.startsWith(monthVal);
-                return matchK && matchM;
+                const matchC = catVal === 'all' || i.category === catVal;
+                return matchK && matchM && matchC;
             });
+
             filtered.sort((a,b) => sortDesc ? new Date(b.orderDate)-new Date(a.orderDate) : new Date(a.orderDate)-new Date(b.orderDate));
             document.getElementById('emptyState').style.display = filtered.length ? 'none' : 'block';
             updateSummary(filtered);
@@ -538,7 +589,7 @@
                         <span class="label">付款方式</span><span class="value" style="font-size:13px;">${PAYMENT_LABELS[item.paymentType] || item.paymentType}</span>
                         <span class="label">單價</span><span class="value">${item.price||0}</span>
                         <span class="label">二補</span><span class="value">${item.secondPay||0}</span>
-                        <span class="label">國際運費</span><span class="value">${item.shipping||0}</span>
+                        <span class="label">國內運費</span><span class="value">${item.shipping||0}</span>
                         <span class="label" style="font-weight:900; color:#000;">總計</span><span class="value highlight">NT$ ${total}</span>
                     </div>
                     <div class="checklist-col">${checksHtml}</div>
@@ -560,9 +611,7 @@
                 item.status[key] = newStatus;
                 if(newStatus && ['pendingShip', 'shipped', 'pickedUp'].includes(key)) {
                     if(!item.dates) item.dates = {};
-                    if(!item.dates[key]) {
-                        item.dates[key] = new Date().toISOString().split('T')[0];
-                    }
+                    if(!item.dates[key]) item.dates[key] = new Date().toISOString().split('T')[0];
                 }
                 saveData(); renderList();
             }
@@ -581,23 +630,20 @@
         function toggleSelection(id) { if(selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id); renderList(); }
         function clearSelection() { selectedIds.clear(); renderList(); }
         function updateBulkBar() { const bar = document.getElementById('bulkActions'); if(selectedIds.size > 0) { bar.classList.add('active'); document.getElementById('selectedCount').innerText = selectedIds.size; } else { bar.classList.remove('active'); } }
-        function mergeSelectedItems() { const name = prompt("輸入併單名稱:"); if(name) { items.forEach(i => { if(selectedIds.has(i.id)) i.group = name; }); clearSelection(); saveData(); renderList(); } }
-        
-        // --- 新增：全選功能 ---
         function selectAllVisible() {
             const keyword = document.getElementById('searchInput').value.toLowerCase();
             const monthVal = document.getElementById('monthFilter').value;
-            
+            const catVal = document.getElementById('categoryFilter').value;
             const filtered = items.filter(i => {
                 const matchK = (i.name||'').toLowerCase().includes(keyword);
                 const matchM = monthVal === 'all' || i.orderDate.startsWith(monthVal);
-                return matchK && matchM;
+                const matchC = catVal === 'all' || i.category === catVal;
+                return matchK && matchM && matchC;
             });
-            
             filtered.forEach(i => selectedIds.add(i.id));
             renderList();
         }
-
+        function mergeSelectedItems() { const name = prompt("輸入併單名稱:"); if(name) { items.forEach(i => { if(selectedIds.has(i.id)) i.group = name; }); clearSelection(); saveData(); renderList(); } }
         function deleteSelectedItems() { if(confirm(`確定刪除選取的 ${selectedIds.size} 筆資料？`)) { items = items.filter(i => !selectedIds.has(i.id)); clearSelection(); saveData(); renderList(); populateMonthFilter(); } }
         function ungroupItem(id) { if(confirm("移除併單？")) { const i = items.find(x => x.id === id); if(i) { i.group = null; saveData(); renderList(); } } }
         function toggleSort() { sortDesc = !sortDesc; renderList(); }
@@ -624,8 +670,8 @@
         function importData(input) { const f = input.files[0]; if(!f) return; const r = new FileReader(); r.onload=e=>{ try{ items=JSON.parse(e.target.result); saveData(); populateMonthFilter(); renderList(); alert('匯入成功'); }catch{ alert('錯誤'); } }; r.readAsText(f); }
         function clearAllData() { if(confirm('清空？')) { items=[]; saveData(); populateMonthFilter(); renderList(); } }
         
-        function downloadTemplate() { if(typeof XLSX==='undefined'){alert('網路錯誤');return;} const data=[{"商品名稱":"範例","分類":"周邊","下單日期":"2025-01-01","購買來源":"官網","賣家名稱":"@abc","賣家連結":"","付款方式 (待付款/貨到付款/銀行匯款)":"銀行匯款","匯款日期":"2025-01-01","匯款金額":500,"單價":500,"二補":0,"國際運費":60,"待出貨日":"","已出貨日":"","取貨日":"","訂購連結":"","對帳表連結":"","賣貨便連結":"","備註":""}]; XLSX.writeFile(XLSX.utils.book_new(XLSX.utils.book_append_sheet(XLSX.utils.book_new(), XLSX.utils.json_to_sheet(data), "Sheet1")), "CORTIS_V16範本.xlsx"); }
-        function importExcel(input) { if(typeof XLSX==='undefined'){alert('網路錯誤');input.value='';return;} const f=input.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>{ try{ const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'}); const json=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]); if(json.length===0)throw new Error("無資料"); const newItems=json.map(row=>{ let pType="Pending"; const pRaw=row["付款方式 (待付款/貨到付款/銀行匯款)"]||""; if(pRaw.includes("貨到"))pType="COD"; else if(pRaw.includes("匯款"))pType="Transfer"; return { id:Date.now()+Math.floor(Math.random()*100000), name:row["商品名稱"]||"未命名", category:row["分類"]||"周邊", orderDate:row["下單日期"]||new Date().toISOString().split('T')[0], source:row["購買來源"]||"", contact:row["賣家名稱"]||"", contactLink:row["賣家連結"]||"", paymentType:pType, transferDate:row["匯款日期"]||"", transferAmount:Number(row["匯款金額"])||0, price:Number(row["單價"])||0, secondPay:Number(row["二補"])||0, shipping:Number(row["國際運費"])||0, link:row["訂購連結"]||"", reconcileLink:row["對帳表連結"]||"", sellerLink:row["賣貨便連結"]||"", notes:row["備註"]||"", imageSrc:"", group:null, status:{notArrived:true, pendingShip:!!row["待出貨日"], shipped:!!row["已出貨日"], pickedUp:!!row["取貨日"]}, dates:{pendingShip:row["待出貨日"]||'', shipped:row["已出貨日"]||'', pickedUp:row["取貨日"]||''} }; }); items=[...newItems,...items]; saveData(); populateMonthFilter(); renderList(); alert(`🎉 匯入 ${newItems.length} 筆`); }catch(err){alert("❌ "+err.message);} finally{input.value='';} }; r.readAsArrayBuffer(f); }
+        function downloadTemplate() { if(typeof XLSX==='undefined'){alert('網路錯誤');return;} const data=[{"商品名稱":"範例","分類":"周邊","下單日期":"2025-01-01","購買來源":"官網","賣家名稱":"@abc","賣家連結":"","付款方式 (待付款/貨到付款/銀行匯款)":"銀行匯款","匯款日期":"2025-01-01","匯款金額":500,"單價":500,"二補":0,"國內運費":60,"待出貨日":"","已出貨日":"","取貨日":"","訂購連結":"","對帳表連結":"","賣貨便連結":"","備註":""}]; XLSX.writeFile(XLSX.utils.book_new(XLSX.utils.book_append_sheet(XLSX.utils.book_new(), XLSX.utils.json_to_sheet(data), "Sheet1")), "CORTIS_V17範本.xlsx"); }
+        function importExcel(input) { if(typeof XLSX==='undefined'){alert('網路錯誤');input.value='';return;} const f=input.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>{ try{ const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'}); const json=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]); if(json.length===0)throw new Error("無資料"); const newItems=json.map(row=>{ let pType="Pending"; const pRaw=row["付款方式 (待付款/貨到付款/銀行匯款)"]||""; if(pRaw.includes("貨到"))pType="COD"; else if(pRaw.includes("匯款"))pType="Transfer"; return { id:Date.now()+Math.floor(Math.random()*100000), name:row["商品名稱"]||"未命名", category:row["分類"]||"周邊", orderDate:row["下單日期"]||new Date().toISOString().split('T')[0], source:row["購買來源"]||"", contact:row["賣家名稱"]||"", contactLink:row["賣家連結"]||"", paymentType:pType, transferDate:row["匯款日期"]||"", transferAmount:Number(row["匯款金額"])||0, price:Number(row["單價"])||0, secondPay:Number(row["二補"])||0, shipping:Number(row["國內運費"])||0, link:row["訂購連結"]||"", reconcileLink:row["對帳表連結"]||"", sellerLink:row["賣貨便連結"]||"", notes:row["備註"]||"", imageSrc:"", group:null, status:{notArrived:true, pendingShip:!!row["待出貨日"], shipped:!!row["已出貨日"], pickedUp:!!row["取貨日"]}, dates:{pendingShip:row["待出貨日"]||'', shipped:row["已出貨日"]||'', pickedUp:row["取貨日"]||''} }; }); items=[...newItems,...items]; saveData(); populateMonthFilter(); renderList(); alert(`🎉 匯入 ${newItems.length} 筆`); }catch(err){alert("❌ "+err.message);} finally{input.value='';} }; r.readAsArrayBuffer(f); }
     </script>
 </body>
 </html>
