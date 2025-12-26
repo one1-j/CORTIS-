@@ -2,8 +2,8 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CORTIS 周邊紀錄表</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CORTIS 周邊紀錄 (V8 雲端版)</title>
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon.png">
     
@@ -11,843 +11,290 @@
     <style>
         /* --- CORTIS THEME --- */
         :root {
-            --bg-color: #F0ECE6;   /* 米杏色 */
-            --text-color: #262626; /* 炭黑色 */
-            --white: #FFFFFF;
-            --border: 2px solid var(--text-color);
-            --font-main: 'Inter', 'Noto Sans TC', sans-serif;
-            --accent-color: #d63031; /* 警示紅 */
+            --bg-color: #F0ECE6; --card-bg: #FFFFFF; 
+            --text-main: #262626; --text-sub: #666666;
+            --border: 2px solid #262626; --accent: #d63031; 
+            --font-stack: 'Noto Sans TC', 'Inter', sans-serif;
+            --select-color: #27ae60;
         }
-
-        * { box-sizing: border-box; }
-
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            font-family: var(--font-main);
-            margin: 0;
-            padding: 0;
-            min-height: 100vh;
-            padding-bottom: 80px; /* 預留底部操作列空間 */
-        }
-
-        .container {
-            max-width: 1100px;
-            margin: 0 auto;
-            padding: 40px 20px;
-        }
-
-        /* --- Header --- */
-        header {
-            text-align: center;
-            margin-bottom: 50px;
-            padding-bottom: 20px;
-            border-bottom: var(--border);
-        }
-
-        h1 {
-            font-size: 4rem;
-            font-weight: 900;
-            margin: 0;
-            letter-spacing: -2px;
-            text-transform: uppercase;
-            line-height: 1;
-        }
-
-        h1 span {
-            display: block;
-            font-size: 1.5rem;
-            font-weight: 700;
-            letter-spacing: 5px;
-            margin-top: 10px;
-        }
-
-        /* --- 統計數據條 --- */
-        .stats-bar {
-            background: var(--text-color);
-            color: var(--bg-color);
-            padding: 15px 20px;
-            margin-bottom: 30px;
-            display: flex;
-            justify-content: space-between;
-            font-family: monospace;
-            font-size: 1.1rem;
-            border: 2px solid var(--text-color);
-        }
-
-        .stat-group { display: flex; gap: 20px; }
-        .stat-item span { font-weight: 900; margin-left: 5px; }
-
-        /* --- 主佈局 --- */
-        .dashboard {
-            display: grid;
-            grid-template-columns: 350px 1fr;
-            gap: 40px;
-            align-items: start;
-        }
-
-        @media (max-width: 900px) {
-            .dashboard { grid-template-columns: 1fr; }
-            h1 { font-size: 3rem; }
-        }
-
-        /* --- 表單樣式 --- */
-        .form-panel {
-            background: var(--bg-color);
-            border: var(--border);
-            padding: 25px;
-            position: sticky;
-            top: 20px;
-            z-index: 10;
-        }
-
-        .panel-title {
-            font-size: 1.2rem;
-            font-weight: 900;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #ccc;
-            text-transform: uppercase;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .form-group { margin-bottom: 15px; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { background-color: var(--bg-color); color: var(--text-main); font-family: var(--font-stack); margin: 0; padding: 0; min-height: 100vh; }
         
-        label {
-            display: block;
-            font-size: 0.85rem;
-            font-weight: 700;
-            margin-bottom: 5px;
-        }
-
-        input, select, textarea {
-            width: 100%;
-            padding: 10px;
-            background: transparent;
-            border: 1px solid #999;
-            border-radius: 0;
-            color: var(--text-color);
-            font-family: inherit;
-            font-size: 0.95rem;
-        }
-
-        input:focus, select:focus, textarea:focus {
-            outline: none;
-            border: 2px solid var(--text-color);
-            background: var(--white);
-        }
-
-        textarea { resize: vertical; height: 80px; }
-
-        .row { display: flex; gap: 10px; }
-
-        .payment-toggle {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-        .radio-label {
-            flex: 1;
-            border: 1px solid #999;
-            padding: 10px;
-            text-align: center;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: 0.2s;
-        }
-        input[type="radio"] { display: none; }
-        input[type="radio"]:checked + .radio-label {
-            background: var(--text-color);
-            color: var(--white);
-            border-color: var(--text-color);
-            font-weight: bold;
-        }
-
-        .hidden { display: none; }
-
-        .btn-submit {
-            width: 100%;
-            background: var(--text-color);
-            color: var(--bg-color);
-            border: none;
-            padding: 15px;
-            font-size: 1rem;
-            font-weight: 900;
-            cursor: pointer;
-            margin-top: 10px;
-            transition: transform 0.1s;
-        }
-        .btn-submit:hover { transform: scale(0.98); }
-        .btn-submit:disabled { opacity: 0.7; cursor: not-allowed; }
-
-        /* --- 卡片列表樣式 --- */
-        .merch-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 25px;
-        }
-
-        .merch-card {
-            background: var(--white);
-            border: var(--border);
-            position: relative;
-            transition: transform 0.2s;
-        }
+        .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+        h1 { font-size: 2.5rem; font-weight: 900; text-align: center; margin: 20px 0; border-bottom: var(--border); padding-bottom: 20px; }
         
-        .merch-card.selected {
-            border-color: var(--accent-color);
-            box-shadow: 0 0 0 2px var(--accent-color);
-        }
+        .form-panel { background: var(--card-bg); border: var(--border); padding: 20px; margin-bottom: 30px; }
+        .form-row { display: flex; gap: 15px; margin-bottom: 15px; }
+        .form-col { flex: 1; }
+        label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 5px; }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 0; font-size: 15px; }
+        .btn-submit { width: 100%; background: var(--text-main); color: #fff; padding: 15px; border: none; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; }
+        .btn-submit:disabled { background: #999; }
 
-        .merch-card.refunded {
-            opacity: 0.6;
-            border-style: dashed;
-        }
+        .merch-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+        @media (min-width: 600px) { .merch-grid { grid-template-columns: repeat(2, 1fr); } }
 
-        /* 選擇框樣式 */
-        .card-select-overlay {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            z-index: 5;
-        }
-        
-        .custom-checkbox {
-            width: 24px;
-            height: 24px;
-            border: 2px solid var(--text-color);
-            background: var(--white);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            color: transparent;
-        }
-        
-        .merch-card.selected .custom-checkbox {
-            background: var(--text-color);
-            color: var(--white);
-        }
-
-        .card-img-wrap {
-            height: 200px;
-            background: #e0e0e0;
-            border-bottom: var(--border);
-            overflow: hidden;
-            position: relative;
-        }
-        .merch-img { width: 100%; height: 100%; object-fit: cover; }
-
+        .merch-card { background: var(--card-bg); border: var(--border); position: relative; }
+        .card-header { padding: 15px; border-bottom: 1px dashed #ccc; display: flex; gap: 15px; align-items: center; }
+        .card-thumb { width: 60px; height: 60px; object-fit: cover; border: 1px solid #ccc; flex-shrink: 0; }
+        .card-title { font-weight: 900; font-size: 17px; margin: 0; }
+        .card-subtitle { font-size: 12px; color: var(--text-sub); }
         .card-body { padding: 15px; }
-
-        .card-header {
-            margin-bottom: 10px;
-            padding-left: 30px; /* 為了避開 checkbox */
-        }
-        .item-name {
-            font-size: 1.1rem;
-            font-weight: 900;
-            margin: 0;
-            line-height: 1.3;
-        }
-        .order-date {
-            font-size: 0.75rem;
-            color: #666;
-            white-space: nowrap;
-        }
-
-        /* 合併訂單標籤 */
-        .group-tag {
-            display: inline-block;
-            background: var(--text-color);
-            color: var(--white);
-            font-size: 0.75rem;
-            padding: 2px 8px;
-            margin-top: 5px;
-            font-weight: bold;
-            border-radius: 2px;
-        }
-        .group-tag .remove-group {
-            margin-left: 5px;
-            cursor: pointer;
-            color: #aaa;
-        }
-        .group-tag .remove-group:hover { color: #fff; }
-
-        /* 對帳資訊區 */
-        .finance-block {
-            background: #f4f4f4;
-            padding: 10px;
-            margin: 10px 0;
-            font-size: 0.85rem;
-            border-left: 4px solid var(--text-color);
-        }
-        .finance-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
-        .finance-total { 
-            border-top: 1px dashed #aaa; 
-            padding-top: 5px; 
-            margin-top: 5px; 
-            font-weight: 900; 
-            font-size: 1rem; 
-            text-align: right;
-        }
-
-        .refund-badge {
-            color: var(--accent-color);
-            font-weight: bold;
-            display: block;
-            text-align: right;
-            font-size: 0.8rem;
-            margin-top: 5px;
-        }
-
-        /* 勾選式進度條 */
-        .progress-checklist {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin: 15px 0;
-            padding: 10px 0;
-            border-top: 1px solid #eee;
-            border-bottom: 1px solid #eee;
-        }
-        .check-item {
-            font-size: 0.75rem;
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-            user-select: none;
-        }
-        .check-box {
-            width: 14px;
-            height: 14px;
-            border: 1px solid var(--text-color);
-            margin-right: 4px;
-            display: inline-block;
-            background: transparent;
-        }
-        .check-item.checked .check-box {
-            background: var(--text-color);
-        }
-
-        /* 按鈕區 */
-        .card-links {
-            display: flex;
-            gap: 5px;
-            margin-bottom: 10px;
-        }
-        .link-btn {
-            flex: 1;
-            text-align: center;
-            text-decoration: none;
-            font-size: 0.75rem;
-            border: 1px solid #ccc;
-            color: #555;
-            padding: 5px;
-            display: block;
-        }
-        .link-btn:hover { background: #eee; }
-
-        .notes-area {
-            font-size: 0.8rem;
-            color: #555;
-            background: #fff8dc;
-            padding: 8px;
-            margin-bottom: 10px;
-            white-space: pre-wrap;
-        }
-
-        .card-actions {
-            display: flex;
-            border-top: var(--border);
-            margin: 0 -15px -15px -15px;
-        }
-        .action-btn {
-            flex: 1;
-            background: transparent;
-            border: none;
-            border-right: 1px solid #ccc;
-            padding: 10px;
-            cursor: pointer;
-            font-weight: 700;
-            color: var(--text-color);
-            font-size: 0.8rem;
-        }
-        .action-btn:last-child { border: none; }
-        .action-btn:hover { background: #eee; }
-        .btn-refund { color: var(--accent-color); }
-
-        /* --- 底部批量操作列 --- */
-        .bulk-actions-bar {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%) translateY(100px);
-            background: var(--text-color);
-            color: var(--white);
-            padding: 15px 30px;
-            display: flex;
-            gap: 20px;
-            align-items: center;
-            border-radius: 50px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 100;
-        }
+        .info-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 5px; }
+        .total-row { font-weight: bold; font-size: 16px; text-align: right; border-top: 1px solid #eee; padding-top: 5px; margin-top: 10px; }
+        .card-actions { text-align: right; margin-top: 10px; }
+        .action-btn { background: none; border: none; font-weight: bold; cursor: pointer; margin-left: 10px; }
         
-        .bulk-actions-bar.active {
-            transform: translateX(-50%) translateY(0);
-        }
-
-        .bulk-btn {
-            background: var(--white);
-            color: var(--text-color);
-            border: none;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: 900;
-            cursor: pointer;
-            font-size: 0.9rem;
-        }
-        
-        .bulk-btn.danger {
-            background: var(--accent-color);
-            color: white;
-        }
-
-        .bulk-info {
-            font-weight: bold;
-            font-size: 1.1rem;
-        }
-        
+        .sync-status { text-align: center; font-size: 12px; color: #999; padding: 10px; }
     </style>
 </head>
 <body>
 
     <div class="container">
         <header>
-            <h1>CORTIS <span>MERCH TRACKER</span></h1>
+            <h1>CORTIS MERCH TRACKER</h1>
         </header>
 
-        <div class="stats-bar">
-            <div class="stat-group">
-                <div class="stat-item">總項目: <span id="totalItems">0</span></div>
-            </div>
-            <div class="stat-item">總支出: <span id="totalSpent">NT$ 0</span></div>
-        </div>
-
-        <div class="dashboard">
-            <div class="form-panel">
-                <div class="panel-title">新增紀錄</div>
-                <form id="merchForm">
-                    <div class="form-group">
-                        <label>商品名稱 (必填)</label>
-                        <input type="text" id="name" required placeholder="輸入周邊名稱...">
-                    </div>
-
-                    <div class="row">
-                        <div class="form-group" style="flex:1">
-                            <label>下單日期 (必填)</label>
-                            <input type="date" id="orderDate" required>
-                        </div>
-                        <div class="form-group" style="flex:1">
-                            <label>購買來源</label>
-                            <input type="text" id="source" placeholder="例如: 官網 / 推特">
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>付款方式</label>
-                        <div class="payment-toggle">
-                            <input type="radio" name="paymentType" id="payCOD" value="COD" checked onclick="togglePaymentFields()">
-                            <label for="payCOD" class="radio-label">貨到付款</label>
-                            
-                            <input type="radio" name="paymentType" id="payTransfer" value="Transfer" onclick="togglePaymentFields()">
-                            <label for="payTransfer" class="radio-label">銀行匯款</label>
-                        </div>
-                    </div>
-
-                    <div id="transferFields" class="hidden" style="background: #e8e4de; padding: 10px; margin-bottom: 15px;">
-                        <div class="row">
-                            <div class="form-group" style="flex:1">
-                                <label>匯款日期</label>
-                                <input type="date" id="transferDate">
-                            </div>
-                            <div class="form-group" style="flex:1">
-                                <label>匯款金額</label>
-                                <input type="number" id="transferAmount" placeholder="0">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="form-group" style="flex:1">
-                            <label>商品原價 (必填)</label>
-                            <input type="number" id="price" placeholder="0" required>
-                        </div>
-                        <div class="form-group" style="flex:1">
-                            <label>二補金額</label>
-                            <input type="number" id="secondPay" placeholder="0">
-                        </div>
-                        <div class="form-group" style="flex:1">
-                            <label>國內運費</label>
-                            <input type="number" id="shipping" placeholder="0">
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>訂購連結</label>
-                        <input type="url" id="link" placeholder="原始商品連結...">
-                    </div>
-
-                    <div class="form-group">
-                        <label>賣貨便連結</label>
-                        <input type="url" id="sellerLink" placeholder="賣場/賣貨便連結...">
-                    </div>
-
-                    <div class="form-group">
-                        <label>備註</label>
-                        <textarea id="notes" placeholder="紀錄喊單帳號、交易細節..."></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label>商品圖片 (選填)</label>
-                        <input type="file" id="imageInput" accept="image/*">
-                        <small style="color:#666; display:block; margin-top:5px;">💡 系統會自動壓縮圖片以節省空間</small>
-                    </div>
-
-                    <button type="submit" class="btn-submit">建立紀錄</button>
-                </form>
-            </div>
-
-            <div id="merchList" class="merch-grid">
+        <div class="form-panel">
+            <h2 style="margin-top:0;">新增紀錄</h2>
+            <form id="merchForm">
+                <input type="hidden" id="editId">
+                <div class="form-row">
+                    <div class="form-col"><label>商品名稱*</label><input type="text" id="name" required></div>
+                    <div class="form-col"><label>下單日期*</label><input type="date" id="orderDate" required></div>
                 </div>
+                <div class="form-row">
+                    <div class="form-col"><label>來源</label><input type="text" id="source"></div>
+                    <div class="form-col"><label>聯絡</label><input type="text" id="contact"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-col"><label>單價</label><input type="number" id="price"></div>
+                    <div class="form-col"><label>二補</label><input type="number" id="secondPay"></div>
+                    <div class="form-col"><label>運費</label><input type="number" id="shipping"></div>
+                </div>
+                <div class="form-group"><label>備註</label><textarea id="notes" rows="2"></textarea></div>
+                <div class="form-group"><label>圖片</label><input type="file" id="imageInput" accept="image/*"></div>
+                <button type="submit" class="btn-submit">儲存</button>
+            </form>
         </div>
-    </div>
 
-    <div id="bulkActions" class="bulk-actions-bar">
-        <div class="bulk-info">已選取 <span id="selectedCount">0</span> 筆</div>
-        <button class="bulk-btn" onclick="mergeSelectedItems()">🔗 合併訂單</button>
-        <button class="bulk-btn danger" onclick="deleteSelectedItems()">🗑 刪除</button>
-        <button class="bulk-btn" onclick="clearSelection()" style="background:transparent; color:#fff; border:1px solid #fff;">取消</button>
+        <div class="sync-status" id="syncStatus">🔄 讀取資料中...</div>
+        <div id="merchList" class="merch-grid"></div>
     </div>
 
     <script>
-        // ✅ 你的 Google Apps Script 網址
+        // --- 1. 初始化與變數 ---
         const API_URL = "https://script.google.com/macros/s/AKfycbwYC0jwUIhYHTH1cIYI_-7TYc77jxzJW63jIOzzsosFb-AfOWG9kfURQi5hlsnk-O60-w/exec"; 
-
-        // 預設圖片
-        const DEFAULT_IMG = 'data:image/svg+xml;charset=UTF-8,%3Csvg width%3D%22300%22 height%3D%22200%22 xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 300 200%22 preserveAspectRatio%3D%22none%22%3E%3Crect width%3D%22300%22 height%3D%22200%22 fill%3D%22%23ddd%22%2F%3E%3Ctext x%3D%2250%25%22 y%3D%2250%25%22 dominant-baseline%3D%22middle%22 text-anchor%3D%22middle%22 fill%3D%22%23555%22 font-family%3D%22sans-serif%22%3ENO IMAGE%3C%2Ftext%3E%3C%2Fsvg%3E';
-
+        const STORAGE_KEY = 'cortis_v8_cloud';
         const form = document.getElementById('merchForm');
-        const merchList = document.getElementById('merchList');
-        const totalItemsEl = document.getElementById('totalItems');
-        const totalSpentEl = document.getElementById('totalSpent');
-        const transferFields = document.getElementById('transferFields');
-        const bulkActionsBar = document.getElementById('bulkActions');
-        const selectedCountEl = document.getElementById('selectedCount');
+        const grid = document.getElementById('merchList');
+        const syncStatus = document.getElementById('syncStatus');
 
-        document.getElementById('orderDate').valueAsDate = new Date();
+        let items = [];
 
-        let merchData = [];
-        let selectedIds = new Set(); 
+        window.onload = () => {
+            document.getElementById('orderDate').valueAsDate = new Date();
+            loadData();
+            registerServiceWorker(); // 註冊 PWA
+        };
 
-        // --- 雲端同步核心功能 ---
+        // --- 2. 雲端同步與資料處理 ---
         
         async function loadData() {
-            // 顯示讀取中...
-            totalItemsEl.innerText = "☁️";
+            syncStatus.innerText = "🔄 讀取資料中...";
             try {
-                // 1. 嘗試從雲端抓取資料
+                // 優先從雲端讀取
                 const response = await fetch(API_URL);
                 const cloudData = await response.json();
-                
                 if (Array.isArray(cloudData)) {
-                    merchData = cloudData;
-                    console.log("雲端資料同步成功");
-                    // 同步回本機，以免下次離線沒資料
-                    localStorage.setItem('cortisTrackerDataV2', JSON.stringify(merchData));
-                } else {
-                    // 如果雲端是空的，就讀本機
-                    merchData = JSON.parse(localStorage.getItem('cortisTrackerDataV2')) || [];
+                    items = cloudData;
+                    syncStatus.innerText = "☁️ 雲端同步成功";
+                    // 將雲端資料寫回本機
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
                 }
             } catch (e) {
-                console.warn("雲端讀取失敗 (可能是離線)，切換為本機資料", e);
-                merchData = JSON.parse(localStorage.getItem('cortisTrackerDataV2')) || [];
+                // 雲端失敗，改讀本機
+                console.warn("雲端讀取失敗，使用本機資料", e);
+                items = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+                syncStatus.innerText = "🔌 離線模式";
             }
-            renderMerch();
-            updateStats();
+            renderList();
         }
 
         async function saveData() {
-            // 1. 先存本機 (確保介面立刻反應)
-            localStorage.setItem('cortisTrackerDataV2', JSON.stringify(merchData));
+            // 先存本機，確保介面反應快速
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+            renderList();
             
-            // 2. 更新畫面
-            renderMerch();
-            updateStats();
-            renderSelectionUI();
-
-            // 3. 上傳雲端 (背景執行)
-            // 顯示同步中小圖示
-            const originalText = totalItemsEl.innerText;
-            totalItemsEl.innerText = "🔄"; 
-            
+            // 背景上傳到雲端
+            syncStatus.innerText = "🔄 同步中...";
             try {
                 await fetch(API_URL, {
                     method: 'POST',
-                    mode: 'no-cors', // 重要：解決跨域問題
+                    mode: 'no-cors',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(merchData)
+                    body: JSON.stringify(items)
                 });
-                // 恢復顯示
-                setTimeout(() => updateStats(), 1000); 
+                syncStatus.innerText = "☁️ 雲端同步成功";
             } catch (e) {
                 console.error("雲端上傳失敗", e);
-                totalItemsEl.innerText = "❌";
-                setTimeout(() => updateStats(), 3000);
+                syncStatus.innerText = "❌ 同步失敗，已存至本機";
             }
         }
 
-        // --- 初始化與圖片處理 ---
-
-        function init() {
-            loadData(); // 啟動時呼叫雲端
-        }
-
-        function togglePaymentFields() {
-            const isTransfer = document.getElementById('payTransfer').checked;
-            const fields = document.getElementById('transferFields');
-            if (isTransfer) fields.classList.remove('hidden');
-            else fields.classList.add('hidden');
-        }
-        window.togglePaymentFields = togglePaymentFields;
-
-        const getBase64 = (file) => {
+        // --- 3. 圖片壓縮 ---
+        function compressImage(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.readAsDataURL(file);
-                reader.onload = (event) => {
+                reader.onload = event => {
                     const img = new Image();
                     img.src = event.target.result;
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
                         const MAX_WIDTH = 500;
-                        const scaleSize = MAX_WIDTH / img.width;
-                        if (scaleSize >= 1) { resolve(event.target.result); return; }
+                        const scale = MAX_WIDTH / img.width;
+                        if (scale >= 1) { resolve(img.src); return; } // 如果圖夠小就不壓了
+                        
                         canvas.width = MAX_WIDTH;
-                        canvas.height = img.height * scaleSize;
+                        canvas.height = img.height * scale;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.6));
+                        resolve(canvas.toDataURL('image/jpeg', 0.7)); // 壓縮為 JPG
                     };
-                    img.onerror = (error) => reject(error);
+                    img.onerror = reject;
                 };
-                reader.onerror = error => reject(error);
+                reader.onerror = reject;
             });
         }
 
+        // --- 4. 表單提交 ---
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = form.querySelector('.btn-submit');
-            btn.innerText = "處理中...";
             btn.disabled = true;
+            btn.innerText = "處理中...";
 
             try {
-                const imageInput = document.getElementById('imageInput');
-                let imageSrc = DEFAULT_IMG;
-                if (imageInput.files.length > 0) {
-                    imageSrc = await getBase64(imageInput.files[0]);
+                const editId = document.getElementById('editId').value;
+                let imgData = null;
+                const imgInput = document.getElementById('imageInput');
+
+                if (imgInput.files[0]) {
+                    imgData = await compressImage(imgInput.files[0]);
                 }
 
-                const paymentType = document.querySelector('input[name="paymentType"]:checked').value;
-                const newMerch = {
-                    id: Date.now(),
+                const rawData = {
                     name: document.getElementById('name').value,
                     orderDate: document.getElementById('orderDate').value,
                     source: document.getElementById('source').value,
-                    paymentType: paymentType,
-                    transferDate: document.getElementById('transferDate').value,
-                    transferAmount: Number(document.getElementById('transferAmount').value),
-                    price: Number(document.getElementById('price').value),
-                    secondPay: Number(document.getElementById('secondPay').value),
-                    shipping: Number(document.getElementById('shipping').value),
-                    link: document.getElementById('link').value,
-                    sellerLink: document.getElementById('sellerLink').value,
-                    notes: document.getElementById('notes').value,
-                    imageSrc: imageSrc,
-                    group: null,
-                    status: { ordered: true, paid: paymentType === 'Transfer', shipped: false, secondPayDone: false, arrived: false, received: false },
-                    refund: { isRefunded: false, date: '', amount: 0 }
+                    contact: document.getElementById('contact').value,
+                    price: Number(document.getElementById('price').value) || 0,
+                    secondPay: Number(document.getElementById('secondPay').value) || 0,
+                    shipping: Number(document.getElementById('shipping').value) || 0,
+                    notes: document.getElementById('notes').value
                 };
 
-                merchData.unshift(newMerch);
-                await saveData(); // 呼叫新的儲存函數
+                if (editId) {
+                    // 更新
+                    const index = items.findIndex(i => i.id == editId);
+                    if (index > -1) {
+                        items[index] = { ...items[index], ...rawData, imageSrc: imgData || items[index].imageSrc };
+                    }
+                } else {
+                    // 新增
+                    const newItem = { id: Date.now(), ...rawData, imageSrc: imgData || null };
+                    items.unshift(newItem);
+                }
                 
+                await saveData();
                 form.reset();
+                document.getElementById('editId').value = '';
                 document.getElementById('orderDate').valueAsDate = new Date();
-                togglePaymentFields();
-                alert("✅ 建立成功！(已同步至雲端)");
-
-            } catch (error) {
-                console.error(error);
-                alert("❌ 發生錯誤：" + error.message);
+                
+            } catch(err) {
+                alert("儲存失敗: " + err.message);
             } finally {
-                btn.innerText = "建立紀錄";
                 btn.disabled = false;
+                btn.innerText = "儲存";
             }
         });
 
-        function deleteMerch(id) {
-            if(confirm('確定要刪除這筆紀錄嗎？')) {
-                merchData = merchData.filter(item => item.id !== id);
-                if (selectedIds.has(id)) selectedIds.delete(id);
-                saveData();
-            }
-        }
-
-        function deleteSelectedItems() {
-            if(confirm(`確定要刪除選取的 ${selectedIds.size} 筆紀錄嗎？`)) {
-                merchData = merchData.filter(item => !selectedIds.has(item.id));
-                clearSelection();
-                saveData();
-            }
-        }
-
-        function registerRefund(id) {
-            const item = merchData.find(i => i.id === id);
-            if(item.refund.isRefunded) {
-                if(confirm('取消退款狀態？')) {
-                    item.refund.isRefunded = false;
-                    item.refund.amount = 0;
-                    item.refund.date = '';
-                    saveData();
-                }
-                return;
-            }
-            const amount = prompt("請輸入退款金額:", item.price);
-            if(amount === null) return;
-            const date = prompt("請輸入退款日期 (YYYY-MM-DD):", new Date().toISOString().split('T')[0]);
-            item.refund.isRefunded = true;
-            item.refund.amount = Number(amount);
-            item.refund.date = date;
-            saveData();
-        }
-
-        function toggleStatus(id, key) {
-            const item = merchData.find(i => i.id === id);
-            if(item) {
-                item.status[key] = !item.status[key];
-                saveData();
-            }
-        }
-
-        function toggleSelection(id) {
-            if(selectedIds.has(id)) selectedIds.delete(id);
-            else selectedIds.add(id);
-            renderSelectionUI();
-        }
-
-        function clearSelection() {
-            selectedIds.clear();
-            renderSelectionUI();
-        }
-
-        function renderSelectionUI() {
-            const cards = document.querySelectorAll('.merch-card');
-            cards.forEach(card => {
-                const id = Number(card.dataset.id);
-                const checkbox = card.querySelector('.custom-checkbox');
-                if(selectedIds.has(id)) {
-                    card.classList.add('selected');
-                    checkbox.innerHTML = '✔';
-                } else {
-                    card.classList.remove('selected');
-                    checkbox.innerHTML = '';
-                }
-            });
-            if(selectedIds.size > 0) {
-                bulkActionsBar.classList.add('active');
-                selectedCountEl.innerText = selectedIds.size;
-            } else {
-                bulkActionsBar.classList.remove('active');
-            }
-        }
-
-        function mergeSelectedItems() {
-            if(selectedIds.size < 2) {
-                alert("請至少選擇 2 筆訂單進行合併");
-                return;
-            }
-            const groupName = prompt("請輸入合併群組名稱 (例如: 12月集運):");
-            if(groupName) {
-                merchData.forEach(item => {
-                    if(selectedIds.has(item.id)) item.group = groupName;
-                });
-                alert(`合併完成！群組: ${groupName}`);
-                clearSelection();
-                saveData();
-            }
-        }
-
-        function ungroupItem(id) {
-            const item = merchData.find(i => i.id === id);
-            if(confirm(`將 "${item.name}" 從群組移除？`)) {
-                item.group = null;
-                saveData();
-            }
-        }
-
-        function renderMerch() {
-            merchList.innerHTML = '';
-            merchData.forEach(item => {
-                const totalCost = item.price + item.secondPay + item.shipping;
-                const refundHtml = item.refund.isRefunded ? `<div class="refund-badge">⚠ 已退款: NT$ ${item.refund.amount}</div>` : '';
-                const groupHtml = item.group ? `<div class="group-tag">📦 ${item.group} <span class="remove-group" onclick="event.stopPropagation(); ungroupItem(${item.id})">×</span></div>` : '';
-
+        // --- 5. 渲染與操作 ---
+        function renderList() {
+            grid.innerHTML = '';
+            items.forEach(item => {
+                const total = (item.price || 0) + (item.secondPay || 0) + (item.shipping || 0);
                 const card = document.createElement('div');
-                card.className = `merch-card ${item.refund.isRefunded ? 'refunded' : ''}`;
-                card.dataset.id = item.id;
+                card.className = 'merch-card';
+                card.innerHTML = `
+                    <div class="card-header">
+                        ${item.imageSrc ? `<img src="${item.imageSrc}" class="card-thumb">` : `<div class="card-thumb"></div>`}
+                        <div>
+                            <div class="card-title">${item.name}</div>
+                            <div class="card-subtitle">${item.orderDate} · ${item.source || ''}</div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="info-row"><span>單價</span><span>${item.price}</span></div>
+                        <div class="info-row"><span>二補</span><span>${item.secondPay}</span></div>
+                        <div class="info-row"><span>運費</span><span>${item.shipping}</span></div>
+                        <div class="total-row">總計: NT$ ${total}</div>
+                        <div class="card-actions">
+                            <button class="action-btn" onclick='editItem(${item.id})'>編輯</button>
+                            <button class="action-btn" style="color:red" onclick='deleteItem(${item.id})'>刪除</button>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+        
+        window.editItem = function(id) {
+            const item = items.find(i => i.id === id);
+            if(!item) return;
+            document.getElementById('editId').value = item.id;
+            document.getElementById('name').value = item.name;
+            document.getElementById('orderDate').value = item.orderDate;
+            document.getElementById('source').value = item.source;
+            document.getElementById('contact').value = item.contact;
+            document.getElementById('price').value = item.price;
+            document.getElementById('secondPay').value = item.secondPay;
+            document.getElementById('shipping').value = item.shipping;
+            document.getElementById('notes').value = item.notes;
+            window.scrollTo(0, 0);
+        }
+
+        window.deleteItem = function(id) {
+            if(confirm("確定刪除此紀錄？")) {
+                items = items.filter(i => i.id !== id);
+                saveData();
+            }
+        }
+
+        // --- 6. PWA Service Worker ---
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                const swContent = `
+                    const CACHE_NAME = 'cortis-v8-cache';
+                    const urlsToCache = ['/', 'index.html', 'manifest.json', 'icon.png']; // 假設你有這些檔案
+                    self.addEventListener('install', event => {
+                        event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache)));
+                    });
+                    self.addEventListener('fetch', event => {
+                        event.respondWith(
+                            caches.match(event.request).then(response => response || fetch(event.request))
+                        );
+                    });
+                `;
+                const blob = new Blob([swContent], { type: 'application/javascript' });
+                const swUrl = URL.createObjectURL(blob);
                 
-                const steps = [
-                    { key: 'ordered', label: '下單' }, { key: 'paid', label: item.paymentType === 'Transfer' ? '已匯' : '填單' },
-                    { key: 'shipped', label: '發貨' }, { key: 'secondPayDone', label: '二補' },
-                    { key: 'arrived', label: '抵台' }, { key: 'received', label: '領貨' }
-                ];
-                let checklistHtml = '<div class="progress-checklist">';
-                steps.forEach(step => {
-                    const isChecked = item.status[step.key] ? 'checked' : '';
-                    checklistHtml += `<div class="check-item ${isChecked}" onclick="toggleStatus(${item.id}, '${step.key}')"><span class="check-box"></span>${step.label}</div>`;
-                });
-                checklistHtml += '</div>';
-                let paymentInfo = item.paymentType === 'Transfer' ? `匯款 NT$${item.transferAmount}` : `貨到付款`;
-                card.innerHTML = `<div class="card-select-overlay" onclick="toggleSelection(${item.id})"><div class="custom-checkbox"></div></div><div class="card-img-wrap"><img src="${item.imageSrc}" class="merch-img"></div><div class="card-body"><div class="card-header"><div><h3 class="item-name">${item.name}</h3>${groupHtml}<div class="order-date">${item.orderDate}</div></div></div><div class="finance-block"><div class="finance-row"><span>付款</span><span>${paymentInfo}</span></div><div class="finance-total">總計: NT$ ${totalCost}</div>${refundHtml}</div>${checklistHtml}<div class="card-actions"><button class="action-btn btn-refund" onclick="registerRefund(${item.id})">退款</button><button class="action-btn" onclick="deleteMerch(${item.id})">刪除</button></div></div>`;
-                merchList.appendChild(card);
-            });
+                navigator.serviceWorker.register(swUrl)
+                    .then(reg => console.log('Service Worker 註冊成功:', reg.scope))
+                    .catch(err => console.error('Service Worker 註冊失敗:', err));
+            }
         }
-
-        function updateStats() {
-            const totalItems = merchData.length;
-            const totalSpent = merchData.reduce((acc, item) => {
-                const itemCost = item.price + item.secondPay + item.shipping;
-                const refund = item.refund.isRefunded ? item.refund.amount : 0;
-                return acc + (itemCost - refund);
-            }, 0);
-            totalItemsEl.innerText = totalItems;
-            totalSpentEl.innerText = `NT$ ${totalSpent.toLocaleString()}`;
-        }
-
-        // PWA 註冊
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW failed', err));
-            });
-        }
-
-        init();
     </script>
 </body>
 </html>
