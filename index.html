@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CORTIS (V17 iPad優化版)</title>
+    <title>CORTIS (V18 修復版)</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
@@ -18,7 +18,7 @@
         body { 
             background-color: var(--bg-color); color: var(--text-main); 
             font-family: 'Noto Sans TC', 'Inter', sans-serif; margin: 0; padding: 0; 
-            padding-bottom: calc(var(--nav-height) + 120px); min-height: 100vh; 
+            padding-bottom: calc(var(--nav-height) + 80px); min-height: 100vh; 
         }
 
         /* 🔒 鎖定畫面 */
@@ -35,11 +35,13 @@
             background: #fff; outline: none; font-family: monospace;
         }
 
-        /* 頂部工具 */
+        /* 頂部工具 (現在放在 view-home 內，只在列表顯示) */
         .top-container {
-            background: var(--bg-color); position: sticky; top: 0; z-index: 50;
+            background: var(--bg-color); 
+            position: sticky; top: 0; z-index: 40;
             border-bottom: 1px solid rgba(0,0,0,0.1); padding: 10px 15px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 15px;
         }
         .search-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
         .filter-row { display: flex; gap: 10px; align-items: center; overflow-x: auto; padding-bottom: 5px; }
@@ -66,15 +68,17 @@
         .summary-val { color: var(--text-main); font-weight: 900; font-family: monospace; font-size: 15px; }
 
         .view-section { display: none; padding: 20px; max-width: 1200px; margin: 0 auto; animation: fadeIn 0.2s ease; }
+        /* Home 頁面不需要 padding，因為 top-container 已經有 padding */
+        #view-home { padding: 0; }
         .view-section.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         
         h2.page-title { font-size: 1.8rem; font-weight: 900; margin: 0 0 20px 0; border-bottom: var(--border); padding-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
         .back-btn { font-size: 14px; background: transparent; border: 1px solid #999; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
 
-        /* 卡片網格 (iPad 優化: 4欄) */
-        .card-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
-        @media (min-width: 768px) { .card-grid { grid-template-columns: repeat(4, 1fr); } } 
+        /* 卡片網格 (iPad 優化: 3欄) */
+        .card-grid { display: grid; grid-template-columns: 1fr; gap: 20px; padding: 20px; }
+        @media (min-width: 768px) { .card-grid { grid-template-columns: repeat(3, 1fr); } } 
         
         .merch-card { background: var(--card-bg); border: var(--border); display: flex; flex-direction: column; position: relative; transition: all 0.2s; }
         .merch-card.selected { border-color: var(--select-color); box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.3); }
@@ -185,33 +189,35 @@
         </div>
     </div>
 
-    <div class="top-container">
-        <div class="search-row">
-            <div class="search-box">
-                <span class="search-icon">🔍</span>
-                <input type="text" id="searchInput" class="search-input" placeholder="搜尋商品名稱..." oninput="renderList()">
-            </div>
-            <button class="sort-btn" onclick="toggleSort()">⇅</button>
-        </div>
-        <div class="filter-row">
-            <!-- 月份篩選 -->
-            <select id="monthFilter" class="filter-select" onchange="renderList()">
-                <option value="all">📅 所有月份</option>
-            </select>
-            <!-- 分類篩選 (新增) -->
-            <select id="categoryFilter" class="filter-select" onchange="renderList()">
-                <option value="all">📂 所有分類</option>
-                <option value="周邊">周邊</option>
-                <option value="專輯">專輯</option>
-                <option value="小卡">小卡</option>
-                <option value="票務">票務</option>
-                <option value="其他">其他</option>
-            </select>
-            <div id="syncIndicator" class="sync-status" title="雲端同步狀態"></div>
-        </div>
-    </div>
-
+    <!-- 列表頁 (包含頂部工具) -->
     <div id="view-home" class="view-section active">
+        <!-- 頂部工具區 (只在列表頁顯示) -->
+        <div class="top-container">
+            <div class="search-row">
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="searchInput" class="search-input" placeholder="搜尋商品名稱..." oninput="renderList()">
+                </div>
+                <button class="sort-btn" onclick="toggleSort()">⇅</button>
+            </div>
+            <div class="filter-row">
+                <!-- 月份篩選 -->
+                <select id="monthFilter" class="filter-select" onchange="renderList()">
+                    <option value="all">📅 所有月份</option>
+                </select>
+                <!-- 分類篩選 -->
+                <select id="categoryFilter" class="filter-select" onchange="renderList()">
+                    <option value="all">📂 所有分類</option>
+                    <option value="周邊">周邊</option>
+                    <option value="專輯">專輯</option>
+                    <option value="小卡">小卡</option>
+                    <option value="票務">票務</option>
+                    <option value="其他">其他</option>
+                </select>
+                <div id="syncIndicator" class="sync-status" title="雲端同步狀態"></div>
+            </div>
+        </div>
+
         <div class="summary-bar">
             <span>當前花費</span>
             <span class="summary-val" id="summaryTotal">NT$ 0</span>
@@ -222,6 +228,7 @@
         <div id="emptyState" style="text-align:center; padding:50px; color:#999; display:none;">目前沒有紀錄</div>
     </div>
 
+    <!-- 新增/編輯頁 -->
     <div id="view-add" class="view-section">
         <h2 class="page-title" id="pageTitle">新增紀錄</h2>
         <div class="form-container">
@@ -234,9 +241,16 @@
                         <label>分類</label>
                         <select id="category"><option>周邊</option><option>專輯</option><option>小卡</option><option>票務</option><option>其他</option></select>
                     </div>
+                    <!-- 這裡是修正重點：補回購買來源 input -->
                     <div class="form-col">
-                        <label>下單日期 <span style="color:red">*</span></label><input type="date" id="orderDate" required>
+                        <label>購買來源</label>
+                        <input type="text" id="source" placeholder="例: 官網">
                     </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>下單日期 <span style="color:red">*</span></label>
+                    <input type="date" id="orderDate" required>
                 </div>
                 
                 <div class="form-group">
@@ -271,7 +285,12 @@
                     </div>
                 </div>
 
-                <div class="form-group"><label>連結</label><input type="url" id="link" placeholder="訂購..." style="margin-bottom:5px;"><input type="url" id="reconcileLink" placeholder="對帳表..." style="margin-bottom:5px;"><input type="url" id="sellerLink" placeholder="賣貨便..."></div>
+                <div class="form-group"><label>連結</label>
+                    <input type="url" id="link" placeholder="訂購網址..." style="margin-bottom:5px;">
+                    <input type="url" id="reconcileLink" placeholder="對帳表連結..." style="margin-bottom:5px;">
+                    <input type="url" id="sellerLink" placeholder="賣貨便連結...">
+                </div>
+                
                 <div class="form-group"><label>備註</label><textarea id="notes" style="height:60px;"></textarea></div>
                 <div class="form-group"><label>圖片</label><input type="file" id="imageInput" accept="image/*"></div>
                 <button type="submit" class="btn-main" id="submitBtn">儲存</button>
@@ -334,8 +353,8 @@
 
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbyeGblocTD-g8e3yUbG0YSMBRbT-6Uwfu2gF09Bjgqt32C_GIjBwnl-Ni2-cfDwXQfl4g/exec";
-        const STORAGE_KEY = 'cortis_v17_data';
-        const SETTINGS_KEY = 'cortis_v17_settings';
+        const STORAGE_KEY = 'cortis_v18_data';
+        const SETTINGS_KEY = 'cortis_v18_settings';
         
         let items = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
         let appSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { pinEnabled: false, pin: "0000" };
@@ -403,7 +422,7 @@
             document.getElementById('newPinInput').value = '';
         }
 
-        // --- 表單儲存 (修復 ID 與 編輯) ---
+        // --- 表單儲存 (修復 source null error) ---
         const form = document.getElementById('merchForm');
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -424,6 +443,7 @@
                     catch(err) { console.warn("圖片壓縮失敗"); }
                 }
 
+                // 這裡的 source 現在對應到 HTML 中的 input id="source"
                 const rawData = {
                     name: document.getElementById('name').value, category: document.getElementById('category').value,
                     orderDate: document.getElementById('orderDate').value, source: document.getElementById('source').value, 
@@ -436,7 +456,7 @@
                 };
 
                 if(editId) {
-                    const idx = items.findIndex(i => i.id == editId); // 注意：使用 loose equality == 避免 string/number 差異
+                    const idx = items.findIndex(i => i.id == editId);
                     if(idx > -1) {
                         items[idx] = { ...items[idx], ...rawData };
                         if(imgData) items[idx].imageSrc = imgData;
@@ -670,8 +690,8 @@
         function importData(input) { const f = input.files[0]; if(!f) return; const r = new FileReader(); r.onload=e=>{ try{ items=JSON.parse(e.target.result); saveData(); populateMonthFilter(); renderList(); alert('匯入成功'); }catch{ alert('錯誤'); } }; r.readAsText(f); }
         function clearAllData() { if(confirm('清空？')) { items=[]; saveData(); populateMonthFilter(); renderList(); } }
         
-        function downloadTemplate() { if(typeof XLSX==='undefined'){alert('網路錯誤');return;} const data=[{"商品名稱":"範例","分類":"周邊","下單日期":"2025-01-01","購買來源":"官網","賣家名稱":"@abc","賣家連結":"","付款方式 (待付款/貨到付款/銀行匯款)":"銀行匯款","匯款日期":"2025-01-01","匯款金額":500,"單價":500,"二補":0,"國內運費":60,"待出貨日":"","已出貨日":"","取貨日":"","訂購連結":"","對帳表連結":"","賣貨便連結":"","備註":""}]; XLSX.writeFile(XLSX.utils.book_new(XLSX.utils.book_append_sheet(XLSX.utils.book_new(), XLSX.utils.json_to_sheet(data), "Sheet1")), "CORTIS_V17範本.xlsx"); }
+        function downloadTemplate() { if(typeof XLSX==='undefined'){alert('網路錯誤');return;} const data=[{"商品名稱":"範例","分類":"周邊","下單日期":"2025-01-01","購買來源":"官網","賣家名稱":"@abc","賣家連結":"","付款方式 (待付款/貨到付款/銀行匯款)":"銀行匯款","匯款日期":"2025-01-01","匯款金額":500,"單價":500,"二補":0,"國內運費":60,"待出貨日":"","已出貨日":"","取貨日":"","訂購連結":"","對帳表連結":"","賣貨便連結":"","備註":""}]; XLSX.writeFile(XLSX.utils.book_new(XLSX.utils.book_append_sheet(XLSX.utils.book_new(), XLSX.utils.json_to_sheet(data), "Sheet1")), "CORTIS_V18範本.xlsx"); }
         function importExcel(input) { if(typeof XLSX==='undefined'){alert('網路錯誤');input.value='';return;} const f=input.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>{ try{ const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'}); const json=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]); if(json.length===0)throw new Error("無資料"); const newItems=json.map(row=>{ let pType="Pending"; const pRaw=row["付款方式 (待付款/貨到付款/銀行匯款)"]||""; if(pRaw.includes("貨到"))pType="COD"; else if(pRaw.includes("匯款"))pType="Transfer"; return { id:Date.now()+Math.floor(Math.random()*100000), name:row["商品名稱"]||"未命名", category:row["分類"]||"周邊", orderDate:row["下單日期"]||new Date().toISOString().split('T')[0], source:row["購買來源"]||"", contact:row["賣家名稱"]||"", contactLink:row["賣家連結"]||"", paymentType:pType, transferDate:row["匯款日期"]||"", transferAmount:Number(row["匯款金額"])||0, price:Number(row["單價"])||0, secondPay:Number(row["二補"])||0, shipping:Number(row["國內運費"])||0, link:row["訂購連結"]||"", reconcileLink:row["對帳表連結"]||"", sellerLink:row["賣貨便連結"]||"", notes:row["備註"]||"", imageSrc:"", group:null, status:{notArrived:true, pendingShip:!!row["待出貨日"], shipped:!!row["已出貨日"], pickedUp:!!row["取貨日"]}, dates:{pendingShip:row["待出貨日"]||'', shipped:row["已出貨日"]||'', pickedUp:row["取貨日"]||''} }; }); items=[...newItems,...items]; saveData(); populateMonthFilter(); renderList(); alert(`🎉 匯入 ${newItems.length} 筆`); }catch(err){alert("❌ "+err.message);} finally{input.value='';} }; r.readAsArrayBuffer(f); }
     </script>
 </body>
-</html>
+</html>v
