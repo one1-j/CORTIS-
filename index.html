@@ -3,10 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CORTIS (V9 雲端版)</title>
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icon.png">
-
+    <title>CORTIS (V11 自訂密碼版)</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
@@ -28,8 +25,8 @@
         #lockScreen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: var(--bg-color); z-index: 9999;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            transition: transform 0.3s ease-in-out;
+            display: none; /* 預設隱藏，由 JS 控制 */
+            flex-direction: column; justify-content: center; align-items: center;
         }
         .pin-container { text-align: center; }
         .pin-title { font-size: 2rem; font-weight: 900; margin-bottom: 20px; }
@@ -38,36 +35,31 @@
             border: 2px solid var(--text-main); border-radius: 8px; width: 200px;
             background: #fff; outline: none; font-family: monospace;
         }
-        .pin-hint { font-size: 12px; color: var(--text-sub); margin-top: 15px; }
 
-        /* 頂部工具 */
+        /* 通用介面 */
         .top-container {
             background: var(--bg-color); position: sticky; top: 0; z-index: 50;
             border-bottom: 1px solid rgba(0,0,0,0.1); padding: 10px 15px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
-        .search-row { display: flex; gap: 10px; margin-bottom: 10px; }
-        .filter-row { display: flex; gap: 10px; align-items: center; }
+        .search-row, .filter-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+        .filter-row { margin-bottom: 0; }
         .search-box { flex: 1; position: relative; }
         .search-input { width: 100%; padding: 10px 10px 10px 35px; border: 1px solid #999; border-radius: 4px; background: var(--card-bg); font-size: 14px; }
         .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); opacity: 0.5; }
         .sort-btn { background: var(--text-main); color: var(--bg-color); border: none; padding: 0 15px; border-radius: 4px; font-size: 13px; font-weight: bold; white-space: nowrap; cursor: pointer; }
         .month-select { flex: 1; padding: 8px; border: 2px solid var(--text-main); border-radius: 4px; background: #fff; font-weight: bold; font-size: 13px; color: var(--text-main); }
 
-        /* 雲端狀態燈 */
-        .sync-status {
-            width: 10px; height: 10px; border-radius: 50%; background: #ccc;
-            display: inline-block; margin-right: 5px;
-        }
+        .sync-status { width: 10px; height: 10px; border-radius: 50%; background: #ccc; display: inline-block; margin-right: 5px; }
         .sync-status.ok { background: #2ecc71; box-shadow: 0 0 5px #2ecc71; }
         .sync-status.loading { background: #f1c40f; animation: pulse 1s infinite; }
         .sync-status.error { background: #e74c3c; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
-        /* 內容區塊 */
         .view-section { display: none; padding: 20px; max-width: 1000px; margin: 0 auto; animation: fadeIn 0.2s ease; }
         .view-section.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
         h2.page-title { font-size: 1.8rem; font-weight: 900; margin: 0 0 20px 0; border-bottom: var(--border); padding-bottom: 10px; }
         
         .card-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
@@ -121,6 +113,15 @@
         .btn-backup { background: #eee; border: 1px solid #ccc; padding: 12px; width: 100%; margin-bottom: 10px; font-weight: bold; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .btn-excel { background: #27ae60; color: white; border: none; }
 
+        /* 安全性開關 */
+        .toggle-switch { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
+        .switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--text-main); }
+        input:checked + .slider:before { transform: translateX(24px); }
+
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: var(--nav-height); background: var(--card-bg); border-top: var(--border); display: flex; justify-content: space-around; align-items: center; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
         .nav-item { flex: 1; text-align: center; color: #999; font-size: 11px; font-weight: 700; cursor: pointer; padding-top: 10px; }
         .nav-item.active { color: var(--text-main); }
@@ -136,20 +137,21 @@
 </head>
 <body>
 
+    <!-- 🔒 密碼鎖畫面 (預設隱藏) -->
     <div id="lockScreen">
         <div class="pin-container">
             <div class="pin-title">LOCKED</div>
-            <div class="pin-msg">請輸入 PIN 碼以解鎖</div>
+            <div class="pin-msg">請輸入 PIN 碼</div>
             <input type="password" id="pinInput" class="pin-input" maxlength="4" pattern="[0-9]*" inputmode="numeric">
-            <div class="pin-hint">預設密碼: 0000</div>
         </div>
     </div>
 
+    <!-- 頂部工具區 -->
     <div class="top-container">
         <div class="search-row">
             <div class="search-box">
                 <span class="search-icon">🔍</span>
-                <input type="text" id="searchInput" class="search-input" placeholder="搜尋..." oninput="renderList()">
+                <input type="text" id="searchInput" class="search-input" placeholder="搜尋商品名稱..." oninput="renderList()">
             </div>
             <button class="sort-btn" onclick="toggleSort()">⇅</button>
         </div>
@@ -161,6 +163,7 @@
         </div>
     </div>
 
+    <!-- 列表頁 -->
     <div id="view-home" class="view-section active">
         <div id="currentMonthStats" style="text-align:center; padding:10px; font-size:14px; color:#666; display:none;">
             本月總計: <span id="monthTotal" style="color:#000; font-weight:bold;">NT$ 0</span>
@@ -169,6 +172,7 @@
         <div id="emptyState" style="text-align:center; padding:50px; color:#999; display:none;">目前沒有紀錄</div>
     </div>
 
+    <!-- 新增/編輯頁 -->
     <div id="view-add" class="view-section">
         <h2 class="page-title" id="pageTitle">新增紀錄</h2>
         <div class="form-container">
@@ -192,17 +196,33 @@
         </div>
     </div>
 
+    <!-- 管理頁 -->
     <div id="view-settings" class="view-section">
         <h2 class="page-title">管理</h2>
+        
+        <!-- 安全性設定區 -->
+        <h3 style="margin-bottom:15px;">安全性</h3>
+        <div class="settings-group">
+            <div class="toggle-switch">
+                <span>啟用 PIN 碼鎖定</span>
+                <label class="switch">
+                    <input type="checkbox" id="pinToggle" onchange="togglePinSetting()">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div id="pinChangeArea" class="hidden" style="margin-top:10px;">
+                <input type="number" id="newPinInput" placeholder="設定新 PIN 碼 (4位數字)" style="padding:10px; width:100%; border:1px solid #ccc; margin-bottom:5px;" maxlength="4">
+                <button class="btn-backup" onclick="saveNewPin()" style="background:#262626; color:#fff;">儲存新密碼</button>
+            </div>
+        </div>
+
         <div class="stats-box"><div>總花費</div><div class="stats-big-num" id="statTotalSpent">NT$ 0</div><div>品項數: <span id="statTotalItems">0</span></div></div>
         
-        <h3 style="margin-bottom:10px;">資料匯入</h3>
+        <h3 style="margin-bottom:10px;">資料匯入/備份</h3>
         <div class="settings-group">
             <button class="btn-backup btn-excel" onclick="downloadTemplate()">📊 下載 Excel 範本</button>
             <div style="position:relative; margin-top:10px;"><button class="btn-backup btn-excel" style="background:#262626;" onclick="document.getElementById('excelInput').click()">📥 匯入 Excel</button><input type="file" id="excelInput" onchange="importExcel(this)" accept=".xlsx, .xls, .csv" style="display:none;"></div>
-        </div>
-        <h3 style="margin-bottom:10px;">資料備份</h3>
-        <div class="settings-group">
+            <hr style="margin:15px 0; border:0; border-top:1px solid #eee;">
             <button class="btn-backup" onclick="exportData()">⬇ 下載 JSON 備份</button>
             <div style="position:relative; margin-top:10px;"><button class="btn-backup" onclick="document.getElementById('jsonInput').click()">⬆ 匯入 JSON 備份</button><input type="file" id="jsonInput" onchange="importData(this)" accept=".json" style="display:none;"></div>
             <button class="btn-backup" onclick="forceCloudSync()" style="background:#3498db; color:fff; margin-top:20px;">☁ 強制雲端同步</button>
@@ -223,13 +243,13 @@
     </div>
 
     <script>
-        // --- 設定與變數 ---
-        // ✅ 已更新為您的專屬連結
-        const API_URL = "https://script.google.com/macros/s/AKfycby0gypbeZL48qOwibWwa-h-J96DFtlYcClSebcEi-8UjzEG4U7WzQayAD2Fz-xPuuN_5Q/exec";
-        const APP_PIN = "0000"; // 預設密碼 (請自行修改)
-        const STORAGE_KEY = 'cortis_v9_data';
+        const API_URL = "https://script.google.com/macros/s/AKfycbyeGblocTD-g8e3yUbG0YSMBRbT-6Uwfu2gF09Bjgqt32C_GIjBwnl-Ni2-cfDwXQfl4g/exec";
+        const STORAGE_KEY = 'cortis_v11_data';
+        const SETTINGS_KEY = 'cortis_v11_settings';
         
         let items = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+        let appSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { pinEnabled: false, pin: "0000" };
+        
         let sortDesc = true;
         let selectedIds = new Set();
         let isSyncing = false;
@@ -239,97 +259,187 @@
         const STATUS_LABELS = { notArrived:'未到貨', pendingShip:'待出貨', shipped:'已出貨', pickedUp:'取貨' };
         const PAYMENT_LABELS = { Pending:'待付款', COD:'貨到付款', Transfer:'銀行匯款' };
 
-        // --- 初始化 ---
         window.onload = () => {
-            // PWA 註冊
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW failed', err));
+            // 初始化密碼設定狀態
+            document.getElementById('pinToggle').checked = appSettings.pinEnabled;
+            if(appSettings.pinEnabled) {
+                document.getElementById('pinChangeArea').classList.remove('hidden');
+                document.getElementById('lockScreen').style.display = 'flex';
+                // 綁定解鎖邏輯
+                document.getElementById('pinInput').addEventListener('input', checkPin);
+                document.getElementById('pinInput').focus();
+            } else {
+                initApp();
             }
-
-            // PIN Lock Logic
-            const pinInput = document.getElementById('pinInput');
-            pinInput.focus();
-            pinInput.addEventListener('input', (e) => {
-                if (e.target.value === APP_PIN) {
-                    document.getElementById('lockScreen').style.transform = 'translateY(-100%)';
-                    initApp();
-                }
-            });
         };
+
+        function checkPin(e) {
+            if (e.target.value === appSettings.pin) {
+                document.getElementById('lockScreen').style.display = 'none';
+                initApp();
+            }
+        }
 
         function initApp() {
             renderList(); updateStats(); populateMonthFilter();
             document.getElementById('orderDate').valueAsDate = new Date();
-            // 啟動雲端同步
             syncWithCloud();
         }
 
-        // --- 雲端同步核心 ---
+        // --- 安全性設定功能 ---
+        function togglePinSetting() {
+            const isEnabled = document.getElementById('pinToggle').checked;
+            const area = document.getElementById('pinChangeArea');
+            appSettings.pinEnabled = isEnabled;
+            
+            if(isEnabled) {
+                area.classList.remove('hidden');
+                if(!appSettings.pin) appSettings.pin = "0000"; // 若無密碼則預設
+                alert(`密碼鎖已開啟，預設密碼為 ${appSettings.pin}`);
+            } else {
+                area.classList.add('hidden');
+            }
+            saveSettings();
+        }
+
+        function saveNewPin() {
+            const newPin = document.getElementById('newPinInput').value;
+            if(newPin.length !== 4 || isNaN(newPin)) {
+                alert("請輸入 4 位數字"); return;
+            }
+            appSettings.pin = newPin;
+            saveSettings();
+            alert("密碼修改成功！新密碼: " + newPin);
+            document.getElementById('newPinInput').value = '';
+        }
+
+        function saveSettings() {
+            localStorage.setItem(SETTINGS_KEY, JSON.stringify(appSettings));
+        }
+
+        // --- 核心邏輯修正：確保儲存成功 ---
+        const form = document.getElementById('merchForm');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            btn.innerText = "儲存中...";
+            btn.disabled = true;
+
+            if(!document.getElementById('name').value || !document.getElementById('orderDate').value) {
+                alert("請填寫商品名稱與下單日期");
+                btn.innerText = "儲存"; btn.disabled = false;
+                return;
+            }
+
+            // 1. 準備資料
+            const rawData = {
+                name: document.getElementById('name').value, category: document.getElementById('category').value,
+                orderDate: document.getElementById('orderDate').value, source: document.getElementById('source').value, 
+                contact: document.getElementById('contact').value, contactLink: document.getElementById('contactLink').value,
+                paymentType: document.getElementById('paymentType').value, transferDate: document.getElementById('transferDate').value, 
+                transferAmount: Number(document.getElementById('transferAmount').value), price: Number(document.getElementById('price').value), 
+                secondPay: Number(document.getElementById('secondPay').value), shipping: Number(document.getElementById('shipping').value), 
+                link: document.getElementById('link').value, reconcileLink: document.getElementById('reconcileLink').value,
+                sellerLink: document.getElementById('sellerLink').value, notes: document.getElementById('notes').value
+            };
+
+            // 2. 處理圖片 (如果沒選圖片，直接跳過)
+            let imgData = "";
+            const imgInput = document.getElementById('imageInput');
+            if(imgInput.files && imgInput.files[0]) {
+                try {
+                    imgData = await compressImage(imgInput.files[0]);
+                } catch(err) {
+                    console.warn("圖片壓縮失敗，將不儲存圖片");
+                }
+            }
+
+            // 3. 組合資料
+            const editId = document.getElementById('editId').value;
+            if(editId) {
+                const idx = items.findIndex(i => i.id == editId);
+                if(idx > -1) {
+                    items[idx] = { ...items[idx], ...rawData };
+                    if(imgData) items[idx].imageSrc = imgData; // 只在有新圖時更新
+                }
+            } else {
+                items.unshift({ 
+                    id: Date.now(), 
+                    ...rawData, 
+                    imageSrc: imgData, 
+                    group:null, 
+                    status: {notArrived:true, pendingShip:false, shipped:false, pickedUp:false},
+                    refund: { isRefunded: false } 
+                });
+            }
+
+            // 4. 強制寫入本地 (保證不遺失)
+            saveData();
+            
+            // 5. 重置介面
+            resetForm();
+            populateMonthFilter();
+            switchView('home', document.querySelectorAll('.nav-item')[0]);
+            
+            btn.innerText = "儲存"; btn.disabled = false;
+        });
+
+        // --- 圖片壓縮 (優化版) ---
+        function compressImage(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        const maxWidth = 600; // 降低解析度以確保容量
+                        const scale = maxWidth / img.width;
+                        const width = (scale < 1) ? maxWidth : img.width;
+                        const height = (scale < 1) ? img.height * scale : img.height;
+                        canvas.width = width; canvas.height = height;
+                        ctx.drawImage(img, 0, 0, width, height);
+                        resolve(canvas.toDataURL('image/jpeg', 0.6)); 
+                    };
+                    img.onerror = reject;
+                };
+                reader.onerror = reject;
+            });
+        }
+
+        // --- 雲端同步 ---
         async function syncWithCloud() {
             const ind = document.getElementById('syncIndicator');
             if(isSyncing) return;
             isSyncing = true;
             ind.className = 'sync-status loading';
-
             try {
-                // 1. 嘗試下載雲端資料 (GET)
                 const res = await fetch(API_URL);
                 const cloudData = await res.json();
-                
                 if(Array.isArray(cloudData) && cloudData.length > 0) {
                     if(cloudData.length >= items.length || items.length === 0) {
                         items = cloudData;
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
                         renderList(); updateStats(); populateMonthFilter();
-                        console.log("已從雲端載入資料");
                     }
                 }
-                
                 ind.className = 'sync-status ok';
-            } catch(e) {
-                console.warn("雲端讀取失敗(離線?)", e);
-                ind.className = 'sync-status error';
-            } finally {
-                isSyncing = false;
-            }
-        }
-
-        async function forceCloudSync() {
-            if(!confirm("確定要將目前的資料強制上傳覆蓋雲端嗎？")) return;
-            const ind = document.getElementById('syncIndicator');
-            ind.className = 'sync-status loading';
-            try {
-                await fetch(API_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(items)
-                });
-                alert("已送出上傳請求");
-                ind.className = 'sync-status ok';
-            } catch(e) {
-                alert("上傳失敗");
-                ind.className = 'sync-status error';
-            }
+            } catch(e) { ind.className = 'sync-status error'; } 
+            finally { isSyncing = false; }
         }
 
         function saveData() {
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
                 updateStats();
-                // 背景自動上傳
-                fetch(API_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(items)
-                }).catch(e => console.log("背景上傳失敗", e));
-            } catch (e) {
-                alert("❌ 儲存空間不足，請清除部分圖片");
-            }
+                // 背景上傳 (不等待)
+                fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(items) });
+            } catch (e) { alert("❌ 手機空間已滿，請清除部分資料"); }
         }
 
-        // --- 介面邏輯 ---
+        // --- 介面控制 ---
         function switchView(view, el) {
             Object.values(views).forEach(v => v.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -417,56 +527,6 @@
             updateBulkBar();
         }
 
-        // --- 壓縮與儲存 ---
-        function compressImage(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = (e) => {
-                    const img = new Image(); img.src = e.target.result;
-                    img.onload = () => {
-                        const cvs = document.createElement('canvas'); const ctx = cvs.getContext('2d');
-                        const maxW = 800; const scale = maxW/img.width;
-                        const w = (scale<1)?maxW:img.width; const h = (scale<1)?img.height*scale:img.height;
-                        cvs.width=w; cvs.height=h; ctx.drawImage(img,0,0,w,h);
-                        resolve(cvs.toDataURL('image/jpeg', 0.7));
-                    };
-                    img.onerror = reject;
-                };
-                reader.onerror = reject;
-            });
-        }
-
-        document.getElementById('merchForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if(!document.getElementById('name').value || !document.getElementById('orderDate').value) { alert("請填寫名稱與日期"); return; }
-            try {
-                const editId = document.getElementById('editId').value;
-                const imgInput = document.getElementById('imageInput');
-                let imgData = null;
-                if(imgInput.files[0]) imgData = await compressImage(imgInput.files[0]);
-
-                const rawData = {
-                    name: document.getElementById('name').value, category: document.getElementById('category').value,
-                    orderDate: document.getElementById('orderDate').value, source: document.getElementById('source').value, 
-                    contact: document.getElementById('contact').value, contactLink: document.getElementById('contactLink').value,
-                    paymentType: document.getElementById('paymentType').value, transferDate: document.getElementById('transferDate').value, 
-                    transferAmount: Number(document.getElementById('transferAmount').value), price: Number(document.getElementById('price').value), 
-                    secondPay: Number(document.getElementById('secondPay').value), shipping: Number(document.getElementById('shipping').value), 
-                    link: document.getElementById('link').value, reconcileLink: document.getElementById('reconcileLink').value,
-                    sellerLink: document.getElementById('sellerLink').value, notes: document.getElementById('notes').value
-                };
-
-                if(editId) {
-                    const idx = items.findIndex(i => i.id == editId);
-                    if(idx > -1) items[idx] = { ...items[idx], ...rawData, imageSrc: imgData || items[idx].imageSrc };
-                } else {
-                    items.unshift({ id: Date.now(), ...rawData, imageSrc: imgData||'', group:null, status: {notArrived:true, pendingShip:false, shipped:false, pickedUp:false} });
-                }
-                saveData(); populateMonthFilter(); resetForm(); switchView('home', document.querySelectorAll('.nav-item')[0]);
-            } catch (err) { alert("儲存失敗: " + err.message); }
-        });
-
         // --- 其他工具 ---
         function toggleSelection(id) { if(selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id); renderList(); }
         function clearSelection() { selectedIds.clear(); renderList(); }
@@ -498,11 +558,17 @@
         function exportData() { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(items,null,2)],{type:'application/json'})); a.download = `backup_${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
         function importData(input) { const f = input.files[0]; if(!f) return; const r = new FileReader(); r.onload=e=>{ try{ items=JSON.parse(e.target.result); saveData(); populateMonthFilter(); renderList(); alert('匯入成功'); }catch{ alert('錯誤'); } }; r.readAsText(f); }
         function clearAllData() { if(confirm('清空？')) { items=[]; saveData(); populateMonthFilter(); renderList(); } }
+        
+        function forceCloudSync() {
+            if(!confirm("強制上傳？")) return;
+            fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(items) });
+            alert("已送出");
+        }
 
         function downloadTemplate() {
-            if(typeof XLSX === 'undefined') { alert('Excel 工具未載入，請檢查網路'); return; }
+            if(typeof XLSX === 'undefined') { alert('Excel 工具未載入'); return; }
             const data = [{"商品名稱":"範例","分類":"周邊","下單日期":"2025-01-01","購買來源":"官網","賣家名稱":"@abc","賣家連結":"","付款方式 (待付款/貨到付款/銀行匯款)":"銀行匯款","匯款日期":"2025-01-01","匯款金額":500,"單價":500,"二補":0,"國際運費":60,"訂購連結":"","對帳表連結":"","賣貨便連結":"","備註":""}];
-            XLSX.writeFile(XLSX.utils.book_new(XLSX.utils.book_append_sheet(XLSX.utils.book_new(), XLSX.utils.json_to_sheet(data), "Sheet1")), "CORTIS_V9範本.xlsx");
+            XLSX.writeFile(XLSX.utils.book_new(XLSX.utils.book_append_sheet(XLSX.utils.book_new(), XLSX.utils.json_to_sheet(data), "Sheet1")), "CORTIS_V11範本.xlsx");
         }
         function importExcel(input) {
             if(typeof XLSX === 'undefined') { alert('Excel 工具未載入'); input.value=''; return; }
