@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CORTIS (V15 最新版)</title>
+    <title>CORTIS (V16 全選版)</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
@@ -155,10 +155,11 @@
         .nav-item.active { color: var(--text-main); }
         .nav-icon { font-size: 24px; display: block; margin-bottom: 2px; }
 
-        .bulk-actions-bar { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(150px); background: var(--text-main); color: #fff; padding: 10px 20px; display: flex; gap: 15px; align-items: center; border-radius: 50px; box-shadow: 0 10px 20px rgba(0,0,0,0.3); transition: transform 0.3s; z-index: 99; }
+        .bulk-actions-bar { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(150px); background: var(--text-main); color: #fff; padding: 10px 20px; display: flex; gap: 10px; align-items: center; border-radius: 50px; box-shadow: 0 10px 20px rgba(0,0,0,0.3); transition: transform 0.3s; z-index: 99; white-space: nowrap; overflow-x: auto; max-width: 90%; }
         .bulk-actions-bar.active { transform: translateX(-50%) translateY(0); }
-        .bulk-btn { background: #fff; color: #000; border: none; padding: 5px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; }
+        .bulk-btn { background: #fff; color: #000; border: none; padding: 5px 12px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 12px; }
         .bulk-btn.danger { background: var(--accent); color: #fff; }
+        .bulk-btn.select-all { background: #f39c12; color: #fff; }
 
         .hidden { display: none; }
         .text-red { color: var(--accent); }
@@ -286,8 +287,10 @@
         </div>
     </div>
 
+    <!-- 批量操作列 (含全選) -->
     <div id="bulkActions" class="bulk-actions-bar">
-        <div style="font-size:14px;">已選 <span id="selectedCount">0</span> 筆</div>
+        <div style="font-size:12px;">已選 <span id="selectedCount">0</span> 筆</div>
+        <button class="bulk-btn select-all" onclick="selectAllVisible()">✅ 全選</button>
         <button class="bulk-btn" onclick="mergeSelectedItems()">🔗 合併</button>
         <button class="bulk-btn danger" onclick="deleteSelectedItems()">🗑 刪除</button>
         <button class="bulk-btn" onclick="clearSelection()" style="background:#666; color:#fff;">取消</button>
@@ -301,8 +304,8 @@
 
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbyeGblocTD-g8e3yUbG0YSMBRbT-6Uwfu2gF09Bjgqt32C_GIjBwnl-Ni2-cfDwXQfl4g/exec";
-        const STORAGE_KEY = 'cortis_v15_data';
-        const SETTINGS_KEY = 'cortis_v15_settings';
+        const STORAGE_KEY = 'cortis_v16_data';
+        const SETTINGS_KEY = 'cortis_v16_settings';
         
         let items = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
         let appSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { pinEnabled: false, pin: "0000" };
@@ -579,6 +582,22 @@
         function clearSelection() { selectedIds.clear(); renderList(); }
         function updateBulkBar() { const bar = document.getElementById('bulkActions'); if(selectedIds.size > 0) { bar.classList.add('active'); document.getElementById('selectedCount').innerText = selectedIds.size; } else { bar.classList.remove('active'); } }
         function mergeSelectedItems() { const name = prompt("輸入併單名稱:"); if(name) { items.forEach(i => { if(selectedIds.has(i.id)) i.group = name; }); clearSelection(); saveData(); renderList(); } }
+        
+        // --- 新增：全選功能 ---
+        function selectAllVisible() {
+            const keyword = document.getElementById('searchInput').value.toLowerCase();
+            const monthVal = document.getElementById('monthFilter').value;
+            
+            const filtered = items.filter(i => {
+                const matchK = (i.name||'').toLowerCase().includes(keyword);
+                const matchM = monthVal === 'all' || i.orderDate.startsWith(monthVal);
+                return matchK && matchM;
+            });
+            
+            filtered.forEach(i => selectedIds.add(i.id));
+            renderList();
+        }
+
         function deleteSelectedItems() { if(confirm(`確定刪除選取的 ${selectedIds.size} 筆資料？`)) { items = items.filter(i => !selectedIds.has(i.id)); clearSelection(); saveData(); renderList(); populateMonthFilter(); } }
         function ungroupItem(id) { if(confirm("移除併單？")) { const i = items.find(x => x.id === id); if(i) { i.group = null; saveData(); renderList(); } } }
         function toggleSort() { sortDesc = !sortDesc; renderList(); }
@@ -605,7 +624,7 @@
         function importData(input) { const f = input.files[0]; if(!f) return; const r = new FileReader(); r.onload=e=>{ try{ items=JSON.parse(e.target.result); saveData(); populateMonthFilter(); renderList(); alert('匯入成功'); }catch{ alert('錯誤'); } }; r.readAsText(f); }
         function clearAllData() { if(confirm('清空？')) { items=[]; saveData(); populateMonthFilter(); renderList(); } }
         
-        function downloadTemplate() { if(typeof XLSX==='undefined'){alert('網路錯誤');return;} const data=[{"商品名稱":"範例","分類":"周邊","下單日期":"2025-01-01","購買來源":"官網","賣家名稱":"@abc","賣家連結":"","付款方式 (待付款/貨到付款/銀行匯款)":"銀行匯款","匯款日期":"2025-01-01","匯款金額":500,"單價":500,"二補":0,"國際運費":60,"待出貨日":"","已出貨日":"","取貨日":"","訂購連結":"","對帳表連結":"","賣貨便連結":"","備註":""}]; XLSX.writeFile(XLSX.utils.book_new(XLSX.utils.book_append_sheet(XLSX.utils.book_new(), XLSX.utils.json_to_sheet(data), "Sheet1")), "CORTIS_V15範本.xlsx"); }
+        function downloadTemplate() { if(typeof XLSX==='undefined'){alert('網路錯誤');return;} const data=[{"商品名稱":"範例","分類":"周邊","下單日期":"2025-01-01","購買來源":"官網","賣家名稱":"@abc","賣家連結":"","付款方式 (待付款/貨到付款/銀行匯款)":"銀行匯款","匯款日期":"2025-01-01","匯款金額":500,"單價":500,"二補":0,"國際運費":60,"待出貨日":"","已出貨日":"","取貨日":"","訂購連結":"","對帳表連結":"","賣貨便連結":"","備註":""}]; XLSX.writeFile(XLSX.utils.book_new(XLSX.utils.book_append_sheet(XLSX.utils.book_new(), XLSX.utils.json_to_sheet(data), "Sheet1")), "CORTIS_V16範本.xlsx"); }
         function importExcel(input) { if(typeof XLSX==='undefined'){alert('網路錯誤');input.value='';return;} const f=input.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>{ try{ const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'}); const json=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]); if(json.length===0)throw new Error("無資料"); const newItems=json.map(row=>{ let pType="Pending"; const pRaw=row["付款方式 (待付款/貨到付款/銀行匯款)"]||""; if(pRaw.includes("貨到"))pType="COD"; else if(pRaw.includes("匯款"))pType="Transfer"; return { id:Date.now()+Math.floor(Math.random()*100000), name:row["商品名稱"]||"未命名", category:row["分類"]||"周邊", orderDate:row["下單日期"]||new Date().toISOString().split('T')[0], source:row["購買來源"]||"", contact:row["賣家名稱"]||"", contactLink:row["賣家連結"]||"", paymentType:pType, transferDate:row["匯款日期"]||"", transferAmount:Number(row["匯款金額"])||0, price:Number(row["單價"])||0, secondPay:Number(row["二補"])||0, shipping:Number(row["國際運費"])||0, link:row["訂購連結"]||"", reconcileLink:row["對帳表連結"]||"", sellerLink:row["賣貨便連結"]||"", notes:row["備註"]||"", imageSrc:"", group:null, status:{notArrived:true, pendingShip:!!row["待出貨日"], shipped:!!row["已出貨日"], pickedUp:!!row["取貨日"]}, dates:{pendingShip:row["待出貨日"]||'', shipped:row["已出貨日"]||'', pickedUp:row["取貨日"]||''} }; }); items=[...newItems,...items]; saveData(); populateMonthFilter(); renderList(); alert(`🎉 匯入 ${newItems.length} 筆`); }catch(err){alert("❌ "+err.message);} finally{input.value='';} }; r.readAsArrayBuffer(f); }
     </script>
 </body>
