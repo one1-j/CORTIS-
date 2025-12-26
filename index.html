@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CORTIS (V22 最終修正)</title>
+    <title>CORTIS (V28 強制同步版)</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
         :root {
-            --bg-color: #F0ECE6; /* 1. 改回米黃色 */
+            --bg-color: #F0ECE6;
             --card-bg: #FFFFFF; 
             --text-main: #262626; --text-sub: #666666;
             --border: 1px solid #E0E0E0;
@@ -24,156 +24,132 @@
             padding-bottom: calc(var(--nav-height) + 120px); min-height: 100vh; 
         }
 
-        /* 3. 提示訊息 (Toast) - 白色圓角方框 */
-        #toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 10000; width: auto; text-align: center; }
+        /* 提示訊息 (Toast) */
+        #toast-container { position: fixed; top: 30px; left: 50%; transform: translateX(-50%); z-index: 12000; display: flex; flex-direction: column; gap: 10px; width: auto; max-width: 90%; pointer-events: none; }
         .toast {
-            padding: 10px 20px; border-radius: 20px; background: #fff; color: #000;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15); font-weight: bold; font-size: 14px;
-            display: flex; align-items: center; gap: 8px; justify-content: center;
-            animation: slideDown 0.3s ease-out; border: 1px solid #eee;
+            pointer-events: auto; padding: 12px 24px; border-radius: 50px; background: #fff; color: #333;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15); font-weight: bold; font-size: 14px;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            animation: slideDown 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            border: 1px solid rgba(0,0,0,0.05); white-space: nowrap;
         }
-        @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .toast i { font-style: normal; font-size: 16px; }
+        .toast.success i { color: #27ae60; }
+        .toast.error i { color: #d63031; }
+        @keyframes slideDown { from { transform: translate(-50%, -30px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
 
-        /* 🔒 Lock Screen */
+        /* 圖片檢視器 */
+        #imageViewer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); z-index: 11000;
+            display: none; justify-content: center; align-items: center;
+        }
+        #imageViewer img { max-width: 95%; max-height: 80%; border-radius: 8px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        .close-img-btn {
+            position: absolute; top: 40px; right: 30px;
+            background: rgba(255,255,255,0.2); color: #fff; 
+            width: 44px; height: 44px; border-radius: 50%; font-size: 24px;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+            backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        /* 編輯彈窗 */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 10500;
+            display: none; justify-content: center; align-items: end;
+            backdrop-filter: blur(2px);
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-content {
+            background: #F0ECE6; width: 100%; max-width: 600px; height: 90%; 
+            border-radius: 20px 20px 0 0; padding: 25px;
+            overflow-y: auto; position: relative; animation: slideUp 0.3s ease-out;
+        }
+        @media (min-width: 768px) { .modal-overlay { align-items: center; } .modal-content { height: auto; max-height: 90%; border-radius: 12px; } }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-title { font-size: 1.5rem; font-weight: 900; color: var(--text-main); }
+        .close-modal { font-size: 28px; cursor: pointer; color: #999; padding: 5px; line-height: 1; }
+
+        /* 鎖定畫面 */
         #lockScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 9999; display: none; flex-direction: column; justify-content: center; align-items: center; }
         .pin-container { text-align: center; } .pin-title { font-size: 2rem; font-weight: 900; margin-bottom: 20px; }
         .pin-input { padding: 15px; font-size: 24px; text-align: center; letter-spacing: 10px; border: 2px solid var(--text-main); border-radius: 8px; width: 200px; background: #fff; outline: none; font-family: monospace; }
 
         /* 頂部工具 */
-        .app-header { padding: 15px 15px 5px 15px; background: var(--bg-color); }
-        .app-title { font-size: 24px; font-weight: 900; color: var(--text-main); margin-bottom: 10px; letter-spacing: 1px; }
-
         .top-container {
             background: var(--bg-color); position: sticky; top: 0; z-index: 40;
-            padding: 0 15px 10px 15px;
-            border-bottom: 1px solid rgba(0,0,0,0.05);
+            border-bottom: 1px solid rgba(0,0,0,0.05); padding: 15px; margin-bottom: 5px;
         }
-        
-        .search-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: stretch; }
+        .search-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
         .search-box { flex: 1; position: relative; }
         .search-input { width: 100%; padding: 10px 10px 10px 35px; border: 1px solid #ccc; border-radius: 8px; background: #fff; font-size: 14px; height: 44px; }
         .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); opacity: 0.5; }
-        
-        .sort-btn { 
-            background: var(--text-main); color: #fff; border: none; 
-            padding: 0; width: 44px; border-radius: 8px; font-size: 16px; font-weight: bold; 
-            height: 44px; cursor: pointer; flex-shrink: 0;
-        }
-
+        .sort-btn { background: var(--text-main); color: #fff; border: none; padding: 0; width: 44px; border-radius: 8px; font-size: 16px; font-weight: bold; height: 44px; cursor: pointer; flex-shrink: 0; }
         .filter-row { display: flex; gap: 10px; align-items: center; }
-        /* 5. 分類/月份 置中 */
-        .filter-select { 
-            flex: 1; padding: 0 10px; border: 1px solid #ccc; border-radius: 8px; 
-            background: #fff; font-weight: bold; font-size: 13px; color: var(--text-main); 
-            height: 40px; text-align: center; text-align-last: center;
-        }
+        .filter-select { flex: 1; padding: 0 10px; border: 1px solid #ccc; border-radius: 8px; background: #fff; font-weight: bold; font-size: 13px; color: var(--text-main); height: 44px; text-align: left; }
+        
+        /* 狀態燈 */
+        .sync-box { width: 44px; height: 44px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; color: #fff; flex-shrink: 0; transition: background 0.3s; }
+        .sync-box.ok { background: #2ecc71; }
+        .sync-box.loading { background: #f1c40f; color: #000; animation: pulse 1s infinite; }
+        .sync-box.error { background: #e74c3c; }
 
-        /* 17. 同步狀態 - 圓角正方形 */
-        .sync-wrapper {
-            width: 44px; height: 44px; /* 與排序按鈕同大小 */
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            flex-shrink: 0; border-radius: 8px; /* 圓角正方形 */
-            background: #fff; border: 1px solid #ccc;
-        }
-        .sync-text { font-size: 10px; font-weight: bold; color: var(--text-main); line-height: 1.2; text-align: center; }
-        .sync-dot { width: 6px; height: 6px; border-radius: 50%; margin-bottom: 2px; }
-        .sync-wrapper.ok .sync-dot { background: #2ecc71; }
-        .sync-wrapper.loading .sync-dot { background: #f1c40f; }
-        .sync-wrapper.error .sync-dot { background: #e74c3c; }
+        .summary-bar { background: var(--text-main); padding: 10px 20px; font-size: 13px; color: #fff; display: flex; justify-content: space-between; align-items: center; margin: 0 15px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .summary-val { color: #fff; font-weight: 900; font-family: monospace; font-size: 16px; }
 
-        /* 精簡版統計列 */
-        .summary-bar {
-            background: #fff; padding: 10px 20px; font-size: 13px; color: #666;
-            display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 1px solid #eee; margin: 0 15px; border-radius: 8px;
-        }
-        .summary-val { color: var(--text-main); font-weight: 900; font-family: monospace; font-size: 16px; }
-
-        /* 內容區塊 */
         .view-section { display: none; padding: 20px; max-width: 1200px; margin: 0 auto; animation: fadeIn 0.2s ease; }
         #view-home { padding: 0; }
         .view-section.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* 6. 移除新增標題文字，保留功能按鈕 */
-        .form-header { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+        h2.page-title { font-size: 1.5rem; font-weight: 800; margin: 0 0 20px 0; padding-bottom: 10px; display: flex; align-items: center; gap: 15px; color: var(--text-main); }
+        .back-btn { font-size: 18px; background: #fff; border: 1px solid #ccc; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-main); }
 
-        /* 卡片網格 */
         .card-grid { display: grid; grid-template-columns: 1fr; gap: 15px; padding: 15px; }
         @media (min-width: 768px) { .card-grid { grid-template-columns: repeat(3, 1fr); } } 
         
-        .merch-card { 
-            background: var(--card-bg); border: 1px solid transparent; 
-            border-radius: var(--radius); 
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06); 
-            overflow: hidden; display: flex; flex-direction: column; position: relative; 
-            transition: all 0.2s; cursor: pointer; /* 整張卡片可點擊看備註 */
-        }
+        .merch-card { background: var(--card-bg); border: 1px solid transparent; border-radius: var(--radius); box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; display: flex; flex-direction: column; position: relative; transition: all 0.2s; }
         .merch-card.selected { border: 2px solid var(--select-color); }
         
-        .card-select-overlay { position: absolute; top: 12px; left: 12px; z-index: 5; }
-        .custom-checkbox { width: 24px; height: 24px; border: 2px solid #fff; background: rgba(0,0,0,0.3); backdrop-filter: blur(2px); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: transparent; cursor: pointer; }
-        .merch-card.selected .custom-checkbox { background: var(--select-color); border-color: var(--select-color); color: #fff; }
+        .card-select-overlay { position: absolute; top: 15px; right: 15px; z-index: 5; }
+        .custom-checkbox { width: 24px; height: 24px; border: 2px solid #fff; background: rgba(0,0,0,0.3); backdrop-filter: blur(2px); border-radius: 6px; cursor: pointer; transition: 0.2s; }
+        .merch-card.selected .custom-checkbox { background: var(--select-color); border-color: var(--select-color); }
         
-        /* 4. 圓角方形進度條 */
-        .card-status-bar { height: 8px; background: #eee; width: 94%; margin: 3px auto 0; border-radius: 4px; display: flex; gap: 2px; overflow: hidden; }
+        .card-status-bar { height: 6px; background: #eee; width: 94%; margin: 3px auto 0; border-radius: 4px; display: flex; gap: 2px; overflow: hidden; }
         .status-segment { flex: 1; opacity: 0.2; background: var(--text-main); }
         .status-segment.active { opacity: 1; }
         
-        .card-header { padding: 15px; padding-left: 45px; display: flex; gap: 12px; border-bottom: 1px solid #f5f5f5; }
-        .card-thumb { width: 70px; height: 70px; background: #f5f5f5; border-radius: 8px; object-fit: cover; flex-shrink: 0; border: 1px solid #eee; }
-        .card-title-group { flex: 1; overflow: hidden; display: flex; flex-direction: column; justify-content: center; }
+        .card-header { padding: 15px; display: flex; gap: 12px; border-bottom: 1px solid #f5f5f5; }
+        .card-thumb { width: 70px; height: 70px; background: #f5f5f5; border-radius: 8px; object-fit: cover; flex-shrink: 0; border: 1px solid #eee; cursor: zoom-in; }
+        .card-title-group { flex: 1; overflow: hidden; display: flex; flex-direction: column; justify-content: center; padding-right: 30px; }
         .category-tag { font-size: 10px; background: #f0f0f0; color: #666; padding: 2px 8px; border-radius: 12px; font-weight: 600; display: inline-block; margin-bottom: 4px; width: fit-content; }
         .group-tag { font-size: 10px; background: var(--text-main); color: #fff; padding: 2px 8px; border-radius: 12px; font-weight: 600; display: inline-block; margin-bottom: 4px; margin-right: 5px; width: fit-content; }
         .remove-group { cursor: pointer; margin-left: 5px; opacity: 0.7; }
-        
-        /* 10. 標題太長處理 */
-        .card-title { 
-            font-size: 16px; font-weight: 800; margin: 0 0 3px 0; line-height: 1.3;
-            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-        }
+        .card-title { font-size: 16px; font-weight: 800; margin: 0 0 3px 0; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         .card-subtitle { font-size: 12px; color: #888; }
+        .contact-link { color: #000; text-decoration: underline; font-weight: bold; cursor: pointer; }
         
         .info-grid { padding: 12px 15px; display: grid; grid-template-columns: 80px 1fr; gap: 6px; font-size: 13px; align-items: baseline; }
         .label { color: #888; font-weight: 500; text-align-last: justify; }
         .value { font-weight: 600; text-align: right; font-family: 'Inter', monospace; color: #333; }
         .value.highlight { font-weight: 900; font-size: 15px; border-top: 1px dashed #eee; padding-top: 5px; margin-top: 5px; color: #000; }
         
-        /* 11. 備註顯示區 (點擊展開) */
-        .note-container {
-            display: none; /* 預設隱藏 */
-            padding: 10px 15px; background: #fffbe6; font-size: 12px; color: #555;
-            border-top: 1px solid #f0f0f0; text-align: center;
-        }
-        .note-container.show { display: block; }
+        .note-toggle-btn { font-size: 12px; color: #555; background: #fcfcfc; border: 1px solid #f0f0f0; width: 100%; padding: 8px; text-align: center; cursor: pointer; border-left:none; border-right:none; }
+        .note-content { display: none; padding: 10px 15px; background: #fffbe6; font-size: 12px; color: #555; white-space: pre-wrap; line-height: 1.4; }
+        .note-content.show { display: block; }
 
-        /* 8. & 9. 狀態勾選區 (重新設計) */
-        .checklist-col { 
-            padding: 10px 15px; background: #fff; border-top: 1px solid #f5f5f5; 
-            display: flex; flex-direction: column; gap: 8px;
-        }
-        .check-group { 
-            display: grid; grid-template-columns: 20px 70px 1fr; align-items: center; 
-            font-size: 12px; color: #999; 
-        }
-        /* 2. 方框無勾勾 */
-        .check-box { width: 14px; height: 14px; border: 1px solid #ccc; border-radius: 3px; background: #fff; transition: 0.2s; }
+        .checklist-col { padding: 10px 15px; background: #fff; border-top: 1px solid #f5f5f5; display: flex; flex-direction: column; gap: 8px; }
+        .check-group { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: #666; height: 28px; }
+        .check-left { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .check-box { width: 16px; height: 16px; border: 1px solid #ccc; border-radius: 4px; display: block; background: #fff; transition: all 0.2s; }
         .check-group.checked .check-box { background: var(--text-main); border-color: var(--text-main); }
         .check-group.checked .check-label { font-weight: bold; color: #000; }
-        .check-left { display: flex; align-items: center; cursor: pointer; height: 100%; }
-        
-        .mini-date {
-            border: none; background: #f9f9f9; font-size: 11px; color: #333;
-            text-align: center; width: 100%; font-family: 'Inter', monospace;
-            padding: 2px 5px; border-radius: 4px; visibility: hidden;
-        }
+        .mini-date { border: none; background: #f9f9f9; font-size: 12px; color: #333; border-radius: 4px; text-align: center; width: 110px; font-family: 'Inter', monospace; padding: 2px 5px; visibility: hidden; }
         .check-group.checked .mini-date { visibility: visible; }
 
-        /* 12. 賣家聯絡資訊 (移至底部) */
-        .seller-info {
-            padding: 8px 15px; background: #fcfcfc; border-top: 1px solid #f5f5f5;
-            font-size: 11px; color: #666; text-align: center; display: flex; justify-content: space-between;
-        }
+        .seller-info { padding: 8px 15px; background: #fcfcfc; border-top: 1px solid #f5f5f5; font-size: 11px; color: #666; text-align: center; display: flex; justify-content: space-between; }
         .seller-link { color: #000; text-decoration: underline; cursor: pointer; }
 
         .card-actions { display: grid; grid-template-columns: repeat(4, 1fr); text-align: center; background: #fff; border-top: 1px solid #f5f5f5; }
@@ -181,60 +157,31 @@
         .action-btn:last-child { border: none; }
         .action-btn:active { background: #f9f9f9; }
 
-        /* 表單樣式 */
         .form-container { background: var(--card-bg); padding: 25px; border: var(--border); border-radius: var(--radius); box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
         .form-row { display: flex; gap: 15px; margin-bottom: 15px; }
         .form-col { flex: 1; width: 50%; } 
         .form-group { margin-bottom: 18px; }
         label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; color: #333; }
-        input, select, textarea { 
-            width: 100%; padding: 0 12px; border: 1px solid #ddd; border-radius: 8px; background: #fcfcfc; font-size: 15px; 
-            color: var(--text-main); height: 44px; line-height: 44px; box-sizing: border-box; -webkit-appearance: none; appearance: none; transition: border 0.2s;
-        }
+        input, select, textarea { width: 100%; padding: 0 12px; border: 1px solid #ddd; border-radius: 8px; background: #fcfcfc; font-size: 15px; color: var(--text-main); height: 44px; line-height: 44px; box-sizing: border-box; -webkit-appearance: none; appearance: none; transition: border 0.2s; }
         input:focus, select:focus, textarea:focus { border-color: #666; outline: none; background: #fff; }
         textarea { height: 80px; line-height: 1.5; padding: 10px; }
-        input[type="file"] { padding: 10px; line-height: 1.2; height: auto; border: 1px dashed #ccc; }
+        input[type="file"] { padding: 10px; line-height: 1.2; height: 44px; border: 1px dashed #ccc; }
         .btn-main { width: 100%; background: var(--text-main); color: #fff; padding: 15px; border: none; font-weight: 900; font-size: 16px; cursor: pointer; letter-spacing: 1px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .btn-main:active { transform: scale(0.98); }
-        
-        /* 1. 連結輸入框改為垂直排列 */
-        .link-group { display: flex; flex-direction: column; gap: 10px; }
-
+        .image-group { display: flex; gap: 10px; }
+        .del-img-btn { height: 44px; width: 44px; border: 1px solid #ccc; border-radius: 8px; background: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #d63031; font-weight: bold; }
         #transferFields { background: #f4f4f4; border: 1px solid #eee; padding: 15px; margin-bottom: 15px; border-radius: 8px; }
         .info-input-grid { display: flex; gap: 10px; background: #f9f9f9; padding: 15px; border: 1px solid #eee; border-radius: 8px; }
         .info-input-item { flex: 1; text-align: center; }
         .info-input-item label { font-size: 11px; color: #666; }
         .info-input-item input { text-align: right; background: #fff; }
 
-        /* 4. & 7. 資料管理 - 樣式優化 (粗體、白色圓角) */
+        .settings-menu-btn { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 18px; background: #fff; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 12px; font-weight: 700; font-size: 15px; cursor: pointer; text-align: left; border-radius: 12px; color: #333; transition: transform 0.1s; }
         .section-header { font-size: 14px; color: #333; font-weight: 900; margin: 25px 0 10px 5px; }
-        
-        .clean-btn-group { display: flex; flex-direction: column; gap: 10px; }
-        .clean-btn {
-            background: #fff; border: 1px solid #ddd; 
-            color: var(--text-main); padding: 16px; border-radius: 12px;
-            font-weight: 700; font-size: 15px; cursor: pointer;
-            display: flex; align-items: center; justify-content: space-between;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: transform 0.1s;
-        }
-        .clean-btn:active { transform: scale(0.98); background: #f9f9f9; }
-        .clean-btn span { font-size: 18px; margin-right: 10px; }
-        
-        /* 刪除按鈕維持黃色調 (bg-color) */
+        .clean-btn-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+        .clean-btn { background: #fff; border: 1px solid #ddd; color: var(--text-main); padding: 16px; border-radius: 12px; font-weight: 700; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .clean-btn.danger { background: #FDE8E8; border-color: #F8B4B4; color: #C0392B; }
-
-        /* 設定選單按鈕 */
-        .settings-menu-btn {
-            display: flex; justify-content: space-between; align-items: center;
-            width: 100%; padding: 18px; background: #fff; border: none; 
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            margin-bottom: 12px; font-weight: 700; font-size: 15px; cursor: pointer;
-            text-align: left; border-radius: 12px; color: #333;
-        }
-
-        /* 5. 安全性開關 */
-        .toggle-switch { display: flex; align-items: center; justify-content: space-between; padding: 15px; background: #fff; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .toggle-label { font-weight: 900; font-size: 15px; }
+        
+        .toggle-switch { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; }
         .switch { position: relative; display: inline-block; width: 50px; height: 26px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #eee; transition: .4s; border-radius: 34px; }
@@ -247,25 +194,24 @@
         .nav-item.active { color: var(--text-main); }
         .nav-icon { font-size: 22px; display: block; margin-bottom: 3px; }
 
-        /* 14. 批量操作列 (預設隱藏) */
-        .bulk-actions-bar { 
-            position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(150px); 
-            background: var(--text-main); color: #fff; padding: 10px 20px; 
-            display: none; /* 14. 預設不顯示，JS 控制顯示 */
-            gap: 10px; align-items: center; border-radius: 50px; 
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3); transition: transform 0.3s; z-index: 99; 
-            white-space: nowrap; overflow-x: auto; max-width: 90%; 
-        }
+        /* 批量操作列 */
+        .bulk-actions-bar { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(150px); background: var(--text-main); color: #fff; padding: 10px 20px; display: none; gap: 10px; align-items: center; border-radius: 50px; box-shadow: 0 10px 20px rgba(0,0,0,0.3); transition: transform 0.3s; z-index: 10100; white-space: nowrap; overflow-x: auto; max-width: 90%; }
         .bulk-actions-bar.active { display: flex; transform: translateX(-50%) translateY(0); }
         .bulk-btn { background: #fff; color: #000; border: none; padding: 5px 12px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 12px; }
         .bulk-btn.danger { background: var(--accent); color: #fff; }
         .bulk-btn.select-all { background: #f39c12; color: #fff; }
 
         .hidden { display: none; }
-        .text-red { color: var(--accent); }
     </style>
 </head>
 <body>
+
+    <div id="imageViewer">
+        <div class="close-img-btn" onclick="document.getElementById('imageViewer').style.display='none'">×</div>
+        <img id="fullImage" src="">
+    </div>
+
+    <div id="toast-container"></div>
 
     <div id="lockScreen">
         <div class="pin-container">
@@ -275,28 +221,43 @@
         </div>
     </div>
 
+    <!-- 編輯彈窗 -->
+    <div id="editModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">編輯紀錄</div>
+                <div class="close-modal" onclick="closeEditModal()">×</div>
+            </div>
+            <!-- 編輯表單 -->
+            <form id="editForm" onsubmit="handleEditSubmit(event)">
+                <input type="hidden" name="editId">
+                <div class="form-group"><label>商品名稱 <span style="color:red">*</span></label><input type="text" name="name" required></div>
+                <div class="form-row">
+                    <div class="form-col"><label>分類</label><select name="category"><option>周邊</option><option>專輯</option><option>小卡</option><option>票務</option><option>其他</option></select></div>
+                    <div class="form-col"><label>購買來源</label><input type="text" name="source"></div>
+                </div>
+                <div class="form-group"><label>下單日期 <span style="color:red">*</span></label><input type="date" name="orderDate" required></div>
+                <div class="form-group"><label>賣家聯絡資訊</label><div class="form-row" style="margin:0;"><div class="form-col"><input type="text" name="contact" placeholder="名稱"></div><div class="form-col"><input type="url" name="contactLink" placeholder="連結"></div></div></div>
+                <div class="form-group"><label>付款方式</label><select name="paymentType" onchange="toggleTransferFields(this)"><option value="Pending">待付款</option><option value="COD">貨到付款</option><option value="Transfer">銀行匯款</option></select></div>
+                <div class="transferFields hidden" style="background:#f4f4f4; border:1px solid #eee; padding:15px; margin-bottom:15px; border-radius:8px;"><div class="form-row"><div class="form-col"><label>匯款日期</label><input type="date" name="transferDate"></div><div class="form-col"><label>金額</label><input type="number" name="transferAmount"></div></div></div>
+                <div class="form-group"><label>費用 (NT$)</label><div class="info-input-grid"><div class="info-input-item"><label>單價</label><input type="number" name="price"></div><div class="info-input-item"><label>二補</label><input type="number" name="secondPay"></div><div class="info-input-item"><label>運費</label><input type="number" name="shipping"></div></div></div>
+                <div class="form-group"><label>相關連結</label><div style="display:flex; flex-direction:column; gap:10px;"><input type="url" name="link" placeholder="下單連結..."><input type="url" name="reconcileLink" placeholder="對帳表連結..."></div></div>
+                <div class="form-group"><label>備註</label><textarea name="notes" style="height:60px;"></textarea></div>
+                <div class="form-group"><label>圖片</label><div class="image-group"><input type="file" name="imageInput" accept="image/*" style="flex:1;"><button type="button" class="del-img-btn" onclick="clearEditImage()">🗑</button></div></div>
+                <button type="submit" class="btn-main">更新儲存</button>
+            </form>
+        </div>
+    </div>
+
     <!-- 列表頁 -->
     <div id="view-home" class="view-section active">
-        
-        <div class="app-header">
-            <!-- 7. 追星記帳大標題 -->
-            <div class="app-title">追星記帳</div>
-        </div>
-
         <div class="top-container">
             <div class="search-row">
                 <div class="search-box">
                     <span class="search-icon">🔍</span>
                     <input type="text" id="searchInput" class="search-input" placeholder="搜尋商品名稱..." oninput="renderList()">
                 </div>
-                <div class="right-tools">
-                    <button class="sort-btn" onclick="toggleSort()">⇅</button>
-                    <!-- 17. 同步狀態與排序按鈕對齊 -->
-                    <div id="syncWrapper" class="sync-wrapper ok">
-                        <div class="sync-dot"></div>
-                        <div class="sync-text" id="syncText">已同步</div>
-                    </div>
-                </div>
+                <button class="sort-btn" onclick="toggleSort()">⇅</button>
             </div>
             <div class="filter-row">
                 <select id="monthFilter" class="filter-select" onchange="renderList()">
@@ -310,6 +271,7 @@
                     <option value="票務">票務</option>
                     <option value="其他">其他</option>
                 </select>
+                <div id="syncWrapper" class="sync-box ok">待命</div>
             </div>
         </div>
 
@@ -323,84 +285,24 @@
         <div id="emptyState" style="text-align:center; padding:50px; color:#999; display:none;">目前沒有紀錄</div>
     </div>
 
-    <!-- 新增/編輯頁 -->
+    <!-- 新增頁 -->
     <div id="view-add" class="view-section">
-        <!-- 6. 移除「新增紀錄」標題 -->
         <div class="form-container">
-            <form id="merchForm">
-                <input type="hidden" id="editId">
-                <div class="form-group"><label>商品名稱 <span style="color:red">*</span></label><input type="text" id="name" required></div>
-                
+            <form id="addForm" onsubmit="handleAddSubmit(event)">
+                <div class="form-group"><label>商品名稱 <span style="color:red">*</span></label><input type="text" name="name" required></div>
                 <div class="form-row">
-                    <div class="form-col">
-                        <label>分類</label>
-                        <select id="category"><option>周邊</option><option>專輯</option><option>小卡</option><option>票務</option><option>其他</option></select>
-                    </div>
-                    <div class="form-col">
-                        <label>購買來源</label>
-                        <input type="text" id="source" placeholder="例: 官網">
-                    </div>
+                    <div class="form-col"><label>分類</label><select name="category"><option>周邊</option><option>專輯</option><option>小卡</option><option>票務</option><option>其他</option></select></div>
+                    <div class="form-col"><label>購買來源</label><input type="text" name="source" placeholder="例: 官網"></div>
                 </div>
-                
-                <div class="form-group">
-                    <label>下單日期 <span style="color:red">*</span></label>
-                    <input type="date" id="orderDate" required>
-                </div>
-                
-                <div class="form-group">
-                    <label>賣家聯絡資訊</label>
-                    <div class="form-row" style="margin-bottom:0;">
-                        <div class="form-col"><input type="text" id="contact" placeholder="名稱 (例: 推特@abc)"></div>
-                        <div class="form-col"><input type="url" id="contactLink" placeholder="連結 (選填)"></div>
-                    </div>
-                </div>
-
-                <div class="form-group"><label>付款方式</label>
-                    <select id="paymentType" onchange="toggleTransferFields()">
-                        <option value="Pending">待付款</option>
-                        <option value="COD">貨到付款</option>
-                        <option value="Transfer">銀行匯款</option>
-                    </select>
-                </div>
-
-                <div id="transferFields" class="hidden">
-                    <div class="form-row">
-                        <div class="form-col"><label>匯款日期</label><input type="date" id="transferDate"></div>
-                        <div class="form-col"><label>金額</label><input type="number" id="transferAmount"></div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label>費用 (NT$)</label>
-                    <div class="info-input-grid">
-                        <div class="info-input-item"><label>單價</label><input type="number" id="price"></div>
-                        <div class="info-input-item"><label>二補</label><input type="number" id="secondPay"></div>
-                        <div class="info-input-item"><label>國內運費</label><input type="number" id="shipping"></div>
-                    </div>
-                </div>
-
-                <!-- 1. 連結區垂直排列 -->
-                <div class="form-group">
-                    <label>相關連結</label>
-                    <div class="link-group">
-                        <input type="url" id="link" placeholder="下單連結 (訂購網址)...">
-                        <input type="url" id="reconcileLink" placeholder="對帳表連結...">
-                    </div>
-                </div>
-                
-                <div class="form-group"><label>備註</label><textarea id="notes" style="height:60px;"></textarea></div>
-                
-                <div class="form-group">
-                    <label>圖片</label>
-                    <div style="display:flex; gap:10px; align-items:center;">
-                        <input type="file" id="imageInput" accept="image/*" style="flex:1;">
-                        <!-- 18. 刪除照片按鈕 -->
-                        <button type="button" onclick="clearImageInput()" style="background:#eee; border:1px solid #ccc; padding:10px; border-radius:8px;">🗑</button>
-                    </div>
-                </div>
-                
-                <button type="submit" class="btn-main" id="submitBtn">儲存</button>
-                <button type="button" class="btn-main" id="cancelBtn" onclick="resetForm()" style="background:#999; margin-top:10px; display:none;">取消編輯</button>
+                <div class="form-group"><label>下單日期 <span style="color:red">*</span></label><input type="date" name="orderDate" required></div>
+                <div class="form-group"><label>賣家聯絡資訊</label><div class="form-row" style="margin-bottom:0;"><div class="form-col"><input type="text" name="contact" placeholder="名稱"></div><div class="form-col"><input type="url" name="contactLink" placeholder="連結"></div></div></div>
+                <div class="form-group"><label>付款方式</label><select name="paymentType" onchange="toggleTransferFields(this)"><option value="Pending">待付款</option><option value="COD">貨到付款</option><option value="Transfer">銀行匯款</option></select></div>
+                <div class="transferFields hidden" style="background:#f4f4f4; border:1px solid #eee; padding:15px; margin-bottom:15px; border-radius:8px;"><div class="form-row"><div class="form-col"><label>匯款日期</label><input type="date" name="transferDate"></div><div class="form-col"><label>金額</label><input type="number" name="transferAmount"></div></div></div>
+                <div class="form-group"><label>費用 (NT$)</label><div class="info-input-grid"><div class="info-input-item"><label>單價</label><input type="number" name="price"></div><div class="info-input-item"><label>二補</label><input type="number" name="secondPay"></div><div class="info-input-item"><label>運費</label><input type="number" name="shipping"></div></div></div>
+                <div class="form-group"><label>連結</label><div style="display:flex; flex-direction:column; gap:10px;"><input type="url" name="link" placeholder="下單連結..."><input type="url" name="reconcileLink" placeholder="對帳表連結..."></div></div>
+                <div class="form-group"><label>備註</label><textarea name="notes" style="height:60px;"></textarea></div>
+                <div class="form-group"><label>圖片</label><div class="image-group"><input type="file" name="imageInput" accept="image/*" style="flex:1;"><button type="button" class="del-img-btn" onclick="clearAddImage()">🗑</button></div></div>
+                <button type="submit" class="btn-main">儲存</button>
             </form>
         </div>
     </div>
@@ -412,7 +314,7 @@
         <button class="settings-menu-btn" onclick="openSubPage('security')">🔒 安全性設定</button>
     </div>
 
-    <!-- 資料管理子頁面 (4. 優化排版) -->
+    <!-- 資料匯入/備份 子頁面 -->
     <div id="view-settings-data" class="view-section">
         <h2 class="page-title"><button class="back-btn" onclick="openSubPage('main')">←</button> 資料管理</h2>
         
@@ -436,23 +338,24 @@
 
         <div class="section-header">雲端與重置</div>
         <div class="clean-btn-group">
-            <button class="clean-btn" onclick="forceCloudSync()">☁ 強制雲端同步 <span>›</span></button>
+            <button class="clean-btn" onclick="uploadToCloud()">⬆ 上傳至雲端 <span>›</span></button>
+            <button class="clean-btn" onclick="downloadFromCloud()">⬇ 從雲端還原 <span>›</span></button>
             <button class="clean-btn danger" onclick="clearAllData()">⚠ 清空所有資料</button>
         </div>
     </div>
 
-    <!-- 安全性子頁面 -->
+    <!-- 安全性 子頁面 -->
     <div id="view-settings-security" class="view-section">
         <h2 class="page-title"><button class="back-btn" onclick="openSubPage('main')">←</button> 安全性</h2>
-        
-        <div class="toggle-switch">
-            <span class="toggle-label">啟用 PIN 碼鎖定</span>
-            <label class="switch"><input type="checkbox" id="pinToggle" onchange="togglePinSetting()"><span class="slider"></span></label>
-        </div>
-        
-        <div id="pinChangeArea" class="hidden" style="margin-top:20px;">
-            <input type="number" id="newPinInput" placeholder="輸入新 PIN (4碼)" style="margin-bottom:10px;" maxlength="4">
-            <button class="btn-main" onclick="saveNewPin()">儲存新密碼</button>
+        <div class="settings-card" style="background:#fff; padding:20px; border-radius:12px; border:1px solid #eee;">
+            <div class="toggle-switch">
+                <span>啟用 PIN 碼鎖定</span>
+                <label class="switch"><input type="checkbox" id="pinToggle" onchange="togglePinSetting()"><span class="slider"></span></label>
+            </div>
+            <div id="pinChangeArea" class="hidden" style="margin-top:10px; border-top:1px solid #eee; padding-top:10px;">
+                <input type="number" id="newPinInput" placeholder="輸入新 PIN (4碼)" style="margin-bottom:10px;" maxlength="4">
+                <button class="btn-main" onclick="saveNewPin()">儲存新密碼</button>
+            </div>
         </div>
     </div>
 
@@ -473,8 +376,8 @@
 
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbyeGblocTD-g8e3yUbG0YSMBRbT-6Uwfu2gF09Bjgqt32C_GIjBwnl-Ni2-cfDwXQfl4g/exec";
-        const STORAGE_KEY = 'cortis_v22_data';
-        const SETTINGS_KEY = 'cortis_v22_settings';
+        const STORAGE_KEY = 'cortis_v26_data';
+        const SETTINGS_KEY = 'cortis_v26_settings';
         
         let items = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
         let appSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { pinEnabled: false, pin: "0000" };
@@ -482,7 +385,7 @@
         let sortDesc = true;
         let selectedIds = new Set();
         let isSyncing = false;
-        let currentImage = null; // 用來暫存編輯時的圖片
+        let editImageTemp = null;
 
         const views = { 
             home: document.getElementById('view-home'), 
@@ -501,19 +404,16 @@
                 document.getElementById('lockScreen').style.display = 'flex';
                 document.getElementById('pinInput').addEventListener('input', checkPin);
                 document.getElementById('pinInput').focus();
-            } else {
-                initApp();
-            }
+            } else { initApp(); }
         };
 
-        // 3. 提示 Toast (3秒)
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
-            container.innerHTML = ''; // 清除舊的
+            container.innerHTML = '';
             const toast = document.createElement('div');
-            const icon = type === 'success' ? '✅' : '❌';
+            const icon = type === 'success' ? '<i>✅</i>' : '<i>❌</i>';
             toast.className = `toast ${type}`;
-            toast.innerHTML = `<span>${icon} ${message}</span><button onclick="this.parentElement.remove()">×</button>`;
+            toast.innerHTML = `${icon} <span>${message}</span>`;
             container.appendChild(toast);
             setTimeout(() => { toast.remove(); }, 3000);
         }
@@ -527,87 +427,179 @@
 
         function initApp() {
             renderList(); populateMonthFilter();
-            document.getElementById('orderDate').valueAsDate = new Date();
+            document.querySelector('#addForm [name="orderDate"]').valueAsDate = new Date();
             updateSyncStatus('ready');
             syncWithCloud();
         }
 
-        // --- 核心邏輯修正：儲存 ---
-        const form = document.getElementById('merchForm');
-        form.addEventListener('submit', async (e) => {
+        // --- 強制綁定函式到 window ---
+        
+        window.showImage = function(src) {
+            if(!src) return;
+            document.getElementById('fullImage').src = src;
+            document.getElementById('imageViewer').style.display = 'flex';
+        };
+
+        window.toggleSort = function() { sortDesc = !sortDesc; renderList(); };
+        window.clearAddImage = function() { document.querySelector('#addForm [name="imageInput"]').value = ''; };
+        window.clearEditImage = function() { document.querySelector('#editForm [name="imageInput"]').value = ''; editImageTemp = ''; };
+        
+        window.toggleTransferFields = function(select) { 
+            const form = select.closest('form');
+            const div = form.querySelector('.transferFields');
+            if (select.value === 'Transfer') div.classList.remove('hidden'); 
+            else div.classList.add('hidden'); 
+        };
+
+        window.handleAddSubmit = async function(e) {
             e.preventDefault();
-            
-            // 防止連點
-            const btn = document.getElementById('submitBtn');
-            if(btn.disabled) return;
+            const form = e.target;
+            const btn = form.querySelector('button[type="submit"]');
+            if (btn.disabled) return;
             btn.innerText = "處理中..."; btn.disabled = true;
 
-            if(!document.getElementById('name').value || !document.getElementById('orderDate').value) {
+            const name = form.querySelector('[name="name"]').value;
+            const orderDate = form.querySelector('[name="orderDate"]').value;
+
+            if(!name || !orderDate) {
                 showToast("請填寫商品名稱與下單日期", "error"); 
                 btn.innerText = "儲存"; btn.disabled = false; return;
             }
 
             try {
-                const editId = document.getElementById('editId').value;
-                const imgInput = document.getElementById('imageInput');
-                let imgData = currentImage; // 預設使用暫存的圖片 (編輯時)
-                
-                // 如果有新上傳，則覆蓋
+                const imgInput = form.querySelector('[name="imageInput"]');
+                let imgData = "";
                 if(imgInput.files && imgInput.files[0]) {
-                    try { imgData = await compressImage(imgInput.files[0]); } 
-                    catch(err) { console.warn("圖片處理失敗"); }
+                    imgData = await compressImage(imgInput.files[0]);
                 }
 
-                const rawData = {
-                    name: document.getElementById('name').value, category: document.getElementById('category').value,
-                    orderDate: document.getElementById('orderDate').value, source: document.getElementById('source').value, 
-                    contact: document.getElementById('contact').value, contactLink: document.getElementById('contactLink').value,
-                    paymentType: document.getElementById('paymentType').value, transferDate: document.getElementById('transferDate').value, 
-                    transferAmount: Number(document.getElementById('transferAmount').value), price: Number(document.getElementById('price').value), 
-                    secondPay: Number(document.getElementById('secondPay').value), shipping: Number(document.getElementById('shipping').value), 
-                    link: document.getElementById('link').value, reconcileLink: document.getElementById('reconcileLink').value,
-                    // 13. 取消賣貨便連結，訂購連結改名
-                    // sellerLink: document.getElementById('sellerLink').value, (已移除)
-                    notes: document.getElementById('notes').value
+                const newItem = {
+                    id: String(Date.now()), 
+                    name: name,
+                    category: form.querySelector('[name="category"]').value,
+                    orderDate: orderDate,
+                    source: form.querySelector('[name="source"]').value,
+                    contact: form.querySelector('[name="contact"]').value,
+                    contactLink: form.querySelector('[name="contactLink"]').value,
+                    paymentType: form.querySelector('[name="paymentType"]').value,
+                    transferDate: form.querySelector('[name="transferDate"]').value,
+                    transferAmount: Number(form.querySelector('[name="transferAmount"]').value),
+                    price: Number(form.querySelector('[name="price"]').value),
+                    secondPay: Number(form.querySelector('[name="secondPay"]').value),
+                    shipping: Number(form.querySelector('[name="shipping"]').value),
+                    link: form.querySelector('[name="link"]').value,
+                    reconcileLink: form.querySelector('[name="reconcileLink"]').value,
+                    notes: form.querySelector('[name="notes"]').value,
+                    imageSrc: imgData,
+                    group: null, 
+                    status: {notArrived:true, pendingShip:false, shipped:false, pickedUp:false},
+                    dates: {pendingShip:'', shipped:'', pickedUp:''},
+                    refund: { isRefunded: false } 
                 };
 
-                if(editId) {
-                    const idx = items.findIndex(i => i.id == editId);
-                    if(idx > -1) {
-                        items[idx] = { ...items[idx], ...rawData, imageSrc: imgData };
-                    }
-                } else {
-                    items.unshift({ 
-                        id: Date.now(), ...rawData, imageSrc: imgData, group:null, 
-                        status: {notArrived:true, pendingShip:false, shipped:false, pickedUp:false},
-                        dates: {pendingShip:'', shipped:'', pickedUp:''},
-                        refund: { isRefunded: false } 
-                    });
-                }
-
+                items.unshift(newItem);
                 saveData(); 
-                resetForm(); 
+                form.reset();
+                document.querySelector('#addForm [name="orderDate"]').valueAsDate = new Date();
                 populateMonthFilter();
                 switchView('home', document.querySelectorAll('.nav-item')[0]);
                 showToast("新增成功！");
                 
             } catch (error) { 
-                showToast("儲存失敗", "error"); 
-                console.error(error);
+                showToast("錯誤: " + error.message, "error"); 
             } finally { 
                 btn.innerText = "儲存"; btn.disabled = false; 
             }
-        });
+        };
 
-        // 18. 刪除照片
-        function clearImageInput() {
-            document.getElementById('imageInput').value = '';
-            currentImage = '';
-        }
+        window.handleEditSubmit = async function(e) {
+            e.preventDefault();
+            const form = e.target;
+            const id = form.querySelector('[name="editId"]').value;
+            const idx = items.findIndex(i => String(i.id) === String(id));
+            
+            if(idx === -1) { showToast("找不到資料", "error"); return; }
 
-        // --- 狀態更新 (15. 取消勾選清空日期) ---
-        function toggleStatus(id, key) {
-            const item = items.find(i => i.id === id);
+            const imgInput = form.querySelector('[name="imageInput"]');
+            let imgData = editImageTemp; 
+            
+            if(imgInput.files && imgInput.files[0]) {
+                imgData = await compressImage(imgInput.files[0]);
+            } else if (imgInput.value === '' && !editImageTemp) {
+                imgData = ''; 
+            }
+
+            items[idx] = {
+                ...items[idx],
+                name: form.querySelector('[name="name"]').value,
+                category: form.querySelector('[name="category"]').value,
+                orderDate: form.querySelector('[name="orderDate"]').value,
+                source: form.querySelector('[name="source"]').value,
+                contact: form.querySelector('[name="contact"]').value,
+                contactLink: form.querySelector('[name="contactLink"]').value,
+                paymentType: form.querySelector('[name="paymentType"]').value,
+                transferDate: form.querySelector('[name="transferDate"]').value,
+                transferAmount: Number(form.querySelector('[name="transferAmount"]').value),
+                price: Number(form.querySelector('[name="price"]').value),
+                secondPay: Number(form.querySelector('[name="secondPay"]').value),
+                shipping: Number(form.querySelector('[name="shipping"]').value),
+                link: form.querySelector('[name="link"]').value,
+                reconcileLink: form.querySelector('[name="reconcileLink"]').value,
+                notes: form.querySelector('[name="notes"]').value,
+                imageSrc: imgData
+            };
+
+            saveData();
+            closeEditModal();
+            renderList();
+            showToast("修改成功！");
+        };
+
+        window.openEditModal = function(id) {
+            const item = items.find(i => String(i.id) === String(id));
+            if (!item) return;
+            
+            const form = document.getElementById('editForm');
+            form.querySelector('[name="editId"]').value = item.id;
+            form.querySelector('[name="name"]').value = item.name;
+            form.querySelector('[name="category"]').value = item.category;
+            form.querySelector('[name="source"]').value = item.source || '';
+            form.querySelector('[name="orderDate"]').value = item.orderDate;
+            form.querySelector('[name="contact"]').value = item.contact || '';
+            form.querySelector('[name="contactLink"]').value = item.contactLink || '';
+            form.querySelector('[name="paymentType"]').value = item.paymentType;
+            form.querySelector('[name="transferDate"]').value = item.transferDate || '';
+            form.querySelector('[name="transferAmount"]').value = item.transferAmount || '';
+            form.querySelector('[name="price"]').value = item.price || '';
+            form.querySelector('[name="secondPay"]').value = item.secondPay || '';
+            form.querySelector('[name="shipping"]').value = item.shipping || '';
+            form.querySelector('[name="link"]').value = item.link || '';
+            form.querySelector('[name="reconcileLink"]').value = item.reconcileLink || '';
+            form.querySelector('[name="notes"]').value = item.notes || '';
+            
+            editImageTemp = item.imageSrc; 
+            
+            const transferDiv = form.querySelector('.transferFields');
+            if (item.paymentType === 'Transfer') transferDiv.classList.remove('hidden');
+            else transferDiv.classList.add('hidden');
+            
+            document.getElementById('editModal').classList.add('active');
+        };
+
+        window.closeEditModal = function() {
+            document.getElementById('editModal').classList.remove('active');
+            editImageTemp = null;
+        };
+
+        window.toggleSelection = function(id) { 
+            id = String(id);
+            if(selectedIds.has(id)) selectedIds.delete(id); 
+            else selectedIds.add(id); 
+            renderList(); 
+        };
+
+        window.toggleStatus = function(id, key) {
+            const item = items.find(i => String(i.id) === String(id));
             if(item) {
                 const newStatus = !item.status[key];
                 item.status[key] = newStatus;
@@ -616,25 +608,94 @@
                     if(!item.dates) item.dates = {};
                     if(!item.dates[key]) item.dates[key] = new Date().toISOString().split('T')[0];
                 } else if (!newStatus) {
-                    // 取消勾選時清空日期
                     if(item.dates) item.dates[key] = '';
                 }
                 saveData(); renderList();
             }
-        }
+        };
 
-        function updateStatusDate(id, key, dateValue) {
-            const item = items.find(i => i.id === id);
+        window.updateStatusDate = function(id, key, dateValue) {
+            const item = items.find(i => String(i.id) === String(id));
             if(item) {
                 if(!item.dates) item.dates = {};
                 item.dates[key] = dateValue;
                 if(dateValue && !item.status[key]) item.status[key] = true;
                 saveData();
             }
+        };
+
+        window.deleteItem = function(id) { 
+            if(confirm('確定要刪除這筆紀錄嗎？')) { 
+                items = items.filter(i => String(i.id) !== String(id)); 
+                if(selectedIds.has(String(id))) selectedIds.delete(String(id)); 
+                saveData(); renderList(); populateMonthFilter(); 
+            } 
+        };
+
+        window.deleteSelectedItems = function() { 
+            if(confirm(`確定刪除選取的 ${selectedIds.size} 筆資料？`)) { 
+                items = items.filter(i => !selectedIds.has(String(i.id))); 
+                selectedIds.clear(); 
+                saveData(); renderList(); populateMonthFilter(); 
+            } 
+        };
+
+        window.mergeSelectedItems = function() { 
+            const name = prompt("輸入併單名稱:"); 
+            if(name) { 
+                items.forEach(i => { if(selectedIds.has(String(i.id))) i.group = name; }); 
+                selectedIds.clear(); 
+                saveData(); renderList(); 
+            } 
+        };
+
+        window.selectAllVisible = function() {
+            const keyword = document.getElementById('searchInput').value.toLowerCase();
+            const monthVal = document.getElementById('monthFilter').value;
+            const catVal = document.getElementById('categoryFilter').value;
+            const filtered = items.filter(i => {
+                const matchK = (i.name||'').toLowerCase().includes(keyword);
+                const matchM = monthVal === 'all' || i.orderDate.startsWith(monthVal);
+                const matchC = catVal === 'all' || i.category === catVal;
+                return matchK && matchM && matchC;
+            });
+            filtered.forEach(i => selectedIds.add(String(i.id)));
+            renderList();
+        };
+
+        window.clearSelection = function() { selectedIds.clear(); renderList(); };
+        window.ungroupItem = function(id) { if(confirm("移除併單？")) { const i = items.find(x => String(x.id) === String(id)); if(i) { i.group = null; saveData(); renderList(); } } };
+
+        function updateSyncStatus(status) {
+            const box = document.getElementById('syncWrapper');
+            box.className = 'sync-box ' + status;
+            if(status === 'ok') box.innerText = '已同步';
+            else if(status === 'loading') box.innerText = '同步中';
+            else if(status === 'error') box.innerText = '失敗';
+            else box.innerText = '待命';
         }
 
-        // --- 列表渲染 ---
-        function renderList() {
+        function saveData() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); updateSummary();
+                // 雲端同步 (如果失敗不提示，僅本地存檔)
+                fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(items) });
+            } catch (e) { showToast("儲存空間不足", "error"); }
+        }
+
+        // --- 介面邏輯 ---
+        window.switchView = function(view, el) {
+            Object.values(views).forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            views[view].classList.add('active'); 
+            if(el) el.classList.add('active');
+            
+            if(view === 'home') { renderList(); updateBulkBar(); }
+            else { document.getElementById('bulkActions').classList.remove('active'); }
+            window.scrollTo(0,0);
+        };
+
+        window.renderList = function() {
             const grid = document.getElementById('merchGrid'); grid.innerHTML = '';
             const keyword = document.getElementById('searchInput').value.toLowerCase();
             const monthVal = document.getElementById('monthFilter').value;
@@ -654,20 +715,18 @@
             filtered.forEach(item => {
                 const total = (item.price||0) + (item.secondPay||0) + (item.shipping||0);
                 
-                // 9. 狀態排版優化 (Grid)
                 let checksHtml = '';
                 STATUS_KEYS.forEach(k => {
                     const checked = item.status[k] ? 'checked' : '';
                     const dateVal = (item.dates && item.dates[k]) ? item.dates[k] : '';
                     let dateInputHtml = '';
                     if (['pendingShip', 'shipped', 'pickedUp'].includes(k)) {
-                        // 確保日期輸入框存在，即使沒勾選 (用 visibility 控制)
-                        const style = checked ? '' : 'visibility:hidden';
-                        dateInputHtml = `<input type="date" class="mini-date" value="${dateVal}" style="${style}" onchange="updateStatusDate(${item.id}, '${k}', this.value)" onclick="event.stopPropagation()">`;
+                        const style = checked ? '' : 'visibility:hidden; height:0;';
+                        dateInputHtml = `<input type="date" class="mini-date" value="${dateVal}" style="${style}" onchange="updateStatusDate('${item.id}', '${k}', this.value)" onclick="event.stopPropagation()">`;
                     }
                     checksHtml += `
                         <div class="check-group ${checked}">
-                            <div class="check-left" onclick="toggleStatus(${item.id}, '${k}')">
+                            <div class="check-left" onclick="toggleStatus('${item.id}', '${k}')">
                                 <div class="check-box"></div>
                                 <span class="check-label">${STATUS_LABELS[k]}</span>
                             </div>
@@ -677,92 +736,179 @@
 
                 let contactDisplay = item.contact || '-';
                 if(item.contactLink) contactDisplay = `<a class="contact-link" onclick="window.open('${item.contactLink}', '_blank')">${item.contact || '連結'}</a>`;
-                let groupHtml = item.group ? `<span class="group-tag">📦 ${item.group} <span class="remove-group" onclick="ungroupItem(${item.id})">×</span></span>` : '';
-                const isSelected = selectedIds.has(item.id) ? 'selected' : '';
-                const checkMark = selectedIds.has(item.id) ? '✔' : '';
+                let groupHtml = item.group ? `<span class="group-tag">📦 ${item.group} <span class="remove-group" onclick="ungroupItem('${item.id}')">×</span></span>` : '';
+                
+                const isSelected = selectedIds.has(String(item.id)) ? 'selected' : '';
+                const checkMark = selectedIds.has(String(item.id)) ? '' : ''; // 無勾勾
                 const openUrl = (url) => url ? `window.open('${url}','_blank')` : '';
                 const btnStyle = (url) => url ? '' : 'color:#ccc; cursor:default;';
 
-                // 11. 備註顯示邏輯
-                const noteText = item.notes ? item.notes : "無備註";
+                const noteBtnText = item.notes ? "查看備註" : "無備註";
+                const noteBtnColor = item.notes ? "#333" : "#999";
+                const noteContent = item.notes || "無內容";
                 
+                let payText = PAYMENT_LABELS[item.paymentType] || item.paymentType;
+                if(item.paymentType === 'Transfer' && item.transferDate) {
+                    payText += ` (${item.transferDate})`;
+                }
+
                 const card = document.createElement('div');
                 card.className = `merch-card ${isSelected}`;
-                // 點擊卡片顯示備註
-                card.onclick = (e) => {
-                    // 如果點擊的是按鈕或 checkbox，不觸發
-                    if(e.target.closest('.action-btn') || e.target.closest('.card-select-overlay') || e.target.closest('.check-left') || e.target.tagName === 'INPUT') return;
-                    const noteDiv = card.querySelector('.note-container');
-                    noteDiv.classList.toggle('show');
-                };
+                const imgClick = item.imageSrc ? `onclick="showImage('${item.imageSrc}'); event.stopPropagation();"` : '';
+                const imgHtml = item.imageSrc ? `<img src="${item.imageSrc}" class="card-thumb" ${imgClick}>` : `<div class="card-thumb"></div>`;
 
                 card.innerHTML = `
-                    <div class="card-select-overlay" onclick="toggleSelection(${item.id}); event.stopPropagation();"><div class="custom-checkbox">${checkMark}</div></div>
+                    <div class="card-select-overlay" onclick="toggleSelection('${item.id}'); event.stopPropagation();"><div class="custom-checkbox">${checkMark}</div></div>
                     <div class="card-status-bar">${STATUS_KEYS.map(k => `<div class="status-segment ${item.status[k]?'active':''}"></div>`).join('')}</div>
-                    <div class="card-header">${item.imageSrc ? `<img src="${item.imageSrc}" class="card-thumb">` : `<div class="card-thumb"></div>`}
+                    <div class="card-header">${imgHtml}
                         <div class="card-title-group"><div>${groupHtml}<span class="category-tag">${item.category||'周邊'}</span></div><div class="card-title">${item.name}</div><div class="card-subtitle">${item.orderDate} · ${item.source||''}</div></div>
                     </div>
                     <div class="info-grid">
-                        <span class="label">付款方式</span><span class="value" style="font-size:13px;">${PAYMENT_LABELS[item.paymentType] || item.paymentType}</span>
+                        <span class="label">付款方式</span><span class="value" style="font-size:13px;">${payText}</span>
                         <span class="label">單價</span><span class="value">${item.price||0}</span>
                         <span class="label">二補</span><span class="value">${item.secondPay||0}</span>
                         <span class="label">國內運費</span><span class="value">${item.shipping||0}</span>
                         <span class="label" style="font-weight:900; color:#000;">總計</span><span class="value highlight">NT$ ${total}</span>
                     </div>
                     
-                    <div class="note-container">${noteText}</div>
+                    <button class="note-toggle-btn" style="color:${noteBtnColor}" onclick="toggleNote(this)">${noteBtnText}</button>
+                    <div class="note-content">${noteContent}</div>
                     
                     <div class="checklist-col">${checksHtml}</div>
                     
-                    <!-- 12. 賣家聯絡移至底部 -->
                     <div class="seller-info"><span>賣家資訊</span><span>${contactDisplay}</span></div>
 
                     <div class="card-actions">
-                        <button class="action-btn" onclick="editItem(${item.id})">編輯</button>
+                        <button class="action-btn" onclick="openEditModal('${item.id}')">編輯</button>
                         <button class="action-btn" onclick="${openUrl(item.link)}" style="${btnStyle(item.link)}">下單連結</button>
                         <button class="action-btn" onclick="${openUrl(item.reconcileLink)}" style="${btnStyle(item.reconcileLink)}">對帳表</button>
-                        <button class="action-btn text-red" onclick="deleteItem(${item.id})">刪除</button>
+                        <button class="action-btn text-red" onclick="deleteItem('${item.id}')">刪除</button>
                     </div>`;
                 grid.appendChild(card);
             });
             updateBulkBar();
-        }
+        };
 
-        // --- 批量操作 (修復 16) ---
-        function toggleSelection(id) { 
-            if(selectedIds.has(id)) selectedIds.delete(id); 
-            else selectedIds.add(id); 
-            renderList(); 
-        }
-        function clearSelection() { selectedIds.clear(); renderList(); }
-        
-        // 14. 只有在列表頁才顯示批量操作
         function updateBulkBar() { 
             const bar = document.getElementById('bulkActions'); 
             const isHome = document.getElementById('view-home').classList.contains('active');
             if(selectedIds.size > 0 && isHome) { 
                 bar.classList.add('active'); 
                 document.getElementById('selectedCount').innerText = selectedIds.size; 
-            } else { 
-                bar.classList.remove('active'); 
-            } 
+            } else { bar.classList.remove('active'); } 
         }
 
-        function mergeSelectedItems() { 
-            const name = prompt("輸入併單名稱:"); 
-            if(name) { 
-                items.forEach(i => { if(selectedIds.has(i.id)) i.group = name; }); 
-                clearSelection(); saveData(); renderList(); 
-            } 
-        }
-        function deleteSelectedItems() { 
-            if(confirm(`確定刪除選取的 ${selectedIds.size} 筆資料？`)) { 
-                items = items.filter(i => !selectedIds.has(i.id)); 
-                clearSelection(); saveData(); renderList(); populateMonthFilter(); 
-            } 
+        window.toggleNote = function(btn) {
+            const content = btn.nextElementSibling;
+            if(content.innerText === "無內容") return;
+            content.classList.toggle('show');
+            btn.innerHTML = content.classList.contains('show') ? "隱藏備註" : "查看備註";
+        };
+
+        function updateSummary(filteredItems = items) {
+            const total = filteredItems.reduce((acc, i) => acc + (i.price||0) + (i.secondPay||0) + (i.shipping||0), 0);
+            document.getElementById('summaryTotal').innerText = `NT$ ${total.toLocaleString()}`;
+            document.getElementById('summaryCount').innerText = filteredItems.length;
         }
 
-        // --- 其他 ---
+        function populateMonthFilter() {
+            const select = document.getElementById('monthFilter');
+            const currentVal = select.value;
+            const months = [...new Set(items.map(i => i.orderDate.substring(0, 7)))].sort().reverse();
+            let html = '<option value="all">📅 所有月份</option>';
+            months.forEach(m => { const [y, mm] = m.split('-'); html += `<option value="${m}">${y}年 ${mm}月</option>`; });
+            select.innerHTML = html;
+            if(months.includes(currentVal)) select.value = currentVal; else select.value = "all";
+        }
+
+        window.openSubPage = function(page) {
+            Object.values(views).forEach(v => v.classList.remove('active'));
+            if(page === 'main') views.settings.classList.add('active');
+            else if(page === 'data') views.settingsData.classList.add('active');
+            else if(page === 'security') views.settingsSecurity.classList.add('active');
+            document.getElementById('bulkActions').classList.remove('active');
+            window.scrollTo(0,0);
+        };
+
+        window.uploadToCloud = function() { 
+            showToast("正在上傳...", "loading");
+            fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(items) })
+            .then(()=>{ showToast("✅ 上傳成功！"); updateSyncStatus('ok'); })
+            .catch(()=>{ showToast("❌ 上傳失敗", "error"); updateSyncStatus('error'); }); 
+        };
+
+        window.downloadFromCloud = function() {
+            showToast("正在下載...", "loading");
+            fetch(API_URL)
+            .then(res => res.json())
+            .then(cloudData => {
+                if(Array.isArray(cloudData) && cloudData.length > 0) {
+                    items = cloudData;
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+                    renderList(); populateMonthFilter();
+                    showToast("✅ 資料已還原！");
+                    updateSyncStatus('ok');
+                } else {
+                    showToast("❌ 雲端無資料", "error");
+                }
+            })
+            .catch(e => { showToast("❌ 下載失敗", "error"); updateSyncStatus('error'); });
+        };
+        
+        async function syncWithCloud() {
+            if(isSyncing) return; isSyncing = true; updateSyncStatus('loading');
+            try {
+                const res = await fetch(API_URL); const cloudData = await res.json();
+                if(Array.isArray(cloudData) && cloudData.length >= items.length) {
+                    items = cloudData; localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+                    renderList(); populateMonthFilter();
+                }
+                updateSyncStatus('ok');
+            } catch(e) { updateSyncStatus('error'); } finally { isSyncing = false; }
+        }
+
+        // Excel 功能
+        window.downloadTemplate = function() { 
+            if(typeof XLSX==='undefined'){showToast('網路錯誤: Excel工具未載入', 'error');return;} 
+            const data=[{"商品名稱":"範例","分類":"周邊","下單日期":"2025-01-01","購買來源":"官網","賣家名稱":"@abc","賣家連結":"","付款方式 (待付款/貨到付款/銀行匯款)":"銀行匯款","匯款日期":"2025-01-01","匯款金額":500,"單價":500,"二補":0,"國內運費":60,"待出貨日":"","已出貨日":"","取貨日":"","下單連結":"","對帳表連結":"","備註":""}]; 
+            XLSX.writeFile(XLSX.utils.book_new(XLSX.utils.book_append_sheet(XLSX.utils.book_new(), XLSX.utils.json_to_sheet(data), "Sheet1")), "CORTIS_V24範本.xlsx"); 
+        };
+
+        window.exportData = function() { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(items,null,2)],{type:'application/json'})); a.download = `backup_${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); };
+        
+        window.importData = function(input) { 
+            const f = input.files[0]; if(!f) return; 
+            const r = new FileReader(); 
+            r.onload=e=>{ try{ items=JSON.parse(e.target.result); saveData(); populateMonthFilter(); renderList(); showToast("✅ JSON 匯入成功！"); }catch{ showToast("❌ 格式錯誤", "error"); } }; 
+            r.readAsText(f); 
+        };
+        
+        window.clearAllData = function() { if(confirm('清空？')) { items=[]; saveData(); populateMonthFilter(); renderList(); } };
+
+        window.importExcel = function(input) { 
+            if(typeof XLSX==='undefined'){showToast('網路錯誤', 'error');input.value='';return;} 
+            const f=input.files[0]; if(!f)return; 
+            const r=new FileReader(); r.onload=e=>{ try{ const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'}); const json=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]); if(json.length===0)throw new Error("無資料"); const newItems=json.map(row=>{ let pType="Pending"; const pRaw=row["付款方式 (待付款/貨到付款/銀行匯款)"]||""; if(pRaw.includes("貨到"))pType="COD"; else if(pRaw.includes("匯款"))pType="Transfer"; return { id:String(Date.now()+Math.floor(Math.random()*100000)), name:row["商品名稱"]||"未命名", category:row["分類"]||"周邊", orderDate:row["下單日期"]||new Date().toISOString().split('T')[0], source:row["購買來源"]||"", contact:row["賣家名稱"]||"", contactLink:row["賣家連結"]||"", paymentType:pType, transferDate:row["匯款日期"]||"", transferAmount:Number(row["匯款金額"])||0, price:Number(row["單價"])||0, secondPay:Number(row["二補"])||0, shipping:Number(row["國內運費"])||0, link:row["下單連結"]||"", reconcileLink:row["對帳表連結"]||"", notes:row["備註"]||"", imageSrc:"", group:null, status:{notArrived:true, pendingShip:!!row["待出貨日"], shipped:!!row["已出貨日"], pickedUp:!!row["取貨日"]}, dates:{pendingShip:row["待出貨日"]||'', shipped:row["已出貨日"]||'', pickedUp:row["取貨日"]||''} }; }); items=[...newItems,...items]; saveData(); populateMonthFilter(); renderList(); showToast(`🎉 成功匯入 ${newItems.length} 筆`); }catch(err){showToast("❌ "+err.message, "error");} finally{input.value='';} }; r.readAsArrayBuffer(f); 
+        }
+
+        // 安全性
+        function togglePinSetting() {
+            const isEnabled = document.getElementById('pinToggle').checked;
+            const area = document.getElementById('pinChangeArea');
+            appSettings.pinEnabled = isEnabled;
+            if(isEnabled) { area.classList.remove('hidden'); if(!appSettings.pin) appSettings.pin="0000"; showToast(`密碼已開啟`); } 
+            else { area.classList.add('hidden'); }
+            localStorage.setItem(SETTINGS_KEY, JSON.stringify(appSettings));
+        }
+        function saveNewPin() {
+            const newPin = document.getElementById('newPinInput').value;
+            if(newPin.length !== 4 || isNaN(newPin)) { showToast("請輸入4位數字", "error"); return; }
+            appSettings.pin = newPin;
+            localStorage.setItem(SETTINGS_KEY, JSON.stringify(appSettings));
+            showToast("密碼修改成功");
+            document.getElementById('newPinInput').value = '';
+        }
+
         function compressImage(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -780,130 +926,6 @@
                 };
                 reader.onerror = reject;
             });
-        }
-
-        function updateSyncStatus(status) {
-            const wrapper = document.getElementById('syncWrapper');
-            const text = document.getElementById('syncText');
-            wrapper.className = 'sync-wrapper ' + status;
-            if(status === 'loading') text.innerText = '同步中';
-            else if(status === 'ok') text.innerText = '已同步';
-            else if(status === 'error') text.innerText = '失敗';
-            else text.innerText = '待命';
-        }
-
-        async function syncWithCloud() {
-            if(isSyncing) return; isSyncing = true; updateSyncStatus('loading');
-            try {
-                const res = await fetch(API_URL); const cloudData = await res.json();
-                if(Array.isArray(cloudData) && cloudData.length >= items.length) {
-                    items = cloudData; localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-                    renderList(); populateMonthFilter();
-                }
-                updateSyncStatus('ok');
-            } catch(e) { updateSyncStatus('error'); } finally { isSyncing = false; }
-        }
-
-        function saveData() {
-            try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); updateSummary();
-                fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(items) });
-            } catch (e) { showToast("儲存空間不足", "error"); }
-        }
-
-        function switchView(view, el) {
-            Object.values(views).forEach(v => v.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            views[view].classList.add('active'); 
-            if(el) el.classList.add('active');
-            if(view === 'home') renderList();
-            window.scrollTo(0,0);
-            updateBulkBar(); // 切換頁面時更新
-        }
-
-        function openSubPage(page) {
-            Object.values(views).forEach(v => v.classList.remove('active'));
-            if(page === 'main') views.settings.classList.add('active');
-            else if(page === 'data') views.settingsData.classList.add('active');
-            else if(page === 'security') views.settingsSecurity.classList.add('active');
-            window.scrollTo(0,0);
-        }
-
-        function populateMonthFilter() {
-            const select = document.getElementById('monthFilter');
-            const currentVal = select.value;
-            const months = [...new Set(items.map(i => i.orderDate.substring(0, 7)))].sort().reverse();
-            let html = '<option value="all">📅 所有月份</option>';
-            months.forEach(m => { const [y, mm] = m.split('-'); html += `<option value="${m}">${y}年 ${mm}月</option>`; });
-            select.innerHTML = html;
-            if(months.includes(currentVal)) select.value = currentVal; else select.value = "all";
-        }
-
-        function updateSummary(filteredItems = items) {
-            const total = filteredItems.reduce((acc, i) => acc + (i.price||0) + (i.secondPay||0) + (i.shipping||0), 0);
-            document.getElementById('summaryTotal').innerText = `NT$ ${total.toLocaleString()}`;
-            document.getElementById('summaryCount').innerText = filteredItems.length;
-        }
-
-        function toggleSort() { sortDesc = !sortDesc; renderList(); }
-        function selectAllVisible() {
-            const keyword = document.getElementById('searchInput').value.toLowerCase();
-            const monthVal = document.getElementById('monthFilter').value;
-            const catVal = document.getElementById('categoryFilter').value;
-            const filtered = items.filter(i => {
-                const matchK = (i.name||'').toLowerCase().includes(keyword);
-                const matchM = monthVal === 'all' || i.orderDate.startsWith(monthVal);
-                const matchC = catVal === 'all' || i.category === catVal;
-                return matchK && matchM && matchC;
-            });
-            filtered.forEach(i => selectedIds.add(i.id));
-            renderList();
-        }
-        function ungroupItem(id) { if(confirm("移除併單？")) { const i = items.find(x => x.id === id); if(i) { i.group = null; saveData(); renderList(); } } }
-        
-        function editItem(id) {
-            const item = items.find(i => i.id === id); if(!item) return;
-            document.getElementById('editId').value = item.id; document.getElementById('name').value = item.name;
-            document.getElementById('category').value = item.category; document.getElementById('orderDate').value = item.orderDate;
-            document.getElementById('source').value = item.source || ''; document.getElementById('contact').value = item.contact;
-            document.getElementById('contactLink').value = item.contactLink || ''; document.getElementById('paymentType').value = item.paymentType; 
-            document.getElementById('transferDate').value = item.transferDate; document.getElementById('transferAmount').value = item.transferAmount; 
-            document.getElementById('price').value = item.price; document.getElementById('secondPay').value = item.secondPay; 
-            document.getElementById('shipping').value = item.shipping; document.getElementById('link').value = item.link; 
-            document.getElementById('reconcileLink').value = item.reconcileLink || ''; 
-            // 賣貨便已移除
-            document.getElementById('notes').value = item.notes; 
-            currentImage = item.imageSrc; // 暫存舊圖
-            toggleTransferFields();
-            document.getElementById('pageTitle').innerText = "編輯紀錄"; document.getElementById('submitBtn').innerText = "更新資料"; document.getElementById('cancelBtn').style.display = 'block';
-            switchView('add', document.querySelectorAll('.nav-item')[1]);
-        }
-        function resetForm() { form.reset(); document.getElementById('editId').value = ''; document.getElementById('pageTitle').innerText="新增紀錄"; document.getElementById('submitBtn').innerText="儲存紀錄"; document.getElementById('cancelBtn').style.display='none'; toggleTransferFields(); currentImage=null; }
-        function deleteItem(id) { if(confirm('刪除？')) { items = items.filter(i => i.id !== id); if(selectedIds.has(id)) selectedIds.delete(id); saveData(); renderList(); populateMonthFilter(); } }
-        function toggleTransferFields() { document.getElementById('transferFields').style.display = document.getElementById('paymentType').value === 'Transfer' ? 'block' : 'none'; }
-        function forceCloudSync() { if(confirm("強制上傳？")) { const ind = document.getElementById('syncIndicator'); ind.className = 'sync-status loading'; fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(items) }).then(()=>{ showToast("已送出"); updateSyncStatus('ok'); }).catch(()=>{ showToast("失敗", "error"); updateSyncStatus('error'); }); } }
-        function exportData() { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(items,null,2)],{type:'application/json'})); a.download = `backup_${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
-        function importData(input) { const f = input.files[0]; if(!f) return; const r = new FileReader(); r.onload=e=>{ try{ items=JSON.parse(e.target.result); saveData(); populateMonthFilter(); renderList(); showToast("匯入成功"); }catch{ showToast("錯誤", "error"); } }; r.readAsText(f); }
-        function clearAllData() { if(confirm('清空？')) { items=[]; saveData(); populateMonthFilter(); renderList(); } }
-        
-        function downloadTemplate() { if(typeof XLSX==='undefined'){showToast('網路錯誤', 'error');return;} const data=[{"商品名稱":"範例","分類":"周邊","下單日期":"2025-01-01","購買來源":"官網","賣家名稱":"@abc","賣家連結":"","付款方式 (待付款/貨到付款/銀行匯款)":"銀行匯款","匯款日期":"2025-01-01","匯款金額":500,"單價":500,"二補":0,"國內運費":60,"待出貨日":"","已出貨日":"","取貨日":"","下單連結":"","對帳表連結":"","備註":""}]; XLSX.writeFile(XLSX.utils.book_new(XLSX.utils.book_append_sheet(XLSX.utils.book_new(), XLSX.utils.json_to_sheet(data), "Sheet1")), "CORTIS_V22範本.xlsx"); }
-        function importExcel(input) { if(typeof XLSX==='undefined'){showToast('網路錯誤', 'error');input.value='';return;} const f=input.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>{ try{ const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'}); const json=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]); if(json.length===0)throw new Error("無資料"); const newItems=json.map(row=>{ let pType="Pending"; const pRaw=row["付款方式 (待付款/貨到付款/銀行匯款)"]||""; if(pRaw.includes("貨到"))pType="COD"; else if(pRaw.includes("匯款"))pType="Transfer"; return { id:Date.now()+Math.floor(Math.random()*100000), name:row["商品名稱"]||"未命名", category:row["分類"]||"周邊", orderDate:row["下單日期"]||new Date().toISOString().split('T')[0], source:row["購買來源"]||"", contact:row["賣家名稱"]||"", contactLink:row["賣家連結"]||"", paymentType:pType, transferDate:row["匯款日期"]||"", transferAmount:Number(row["匯款金額"])||0, price:Number(row["單價"])||0, secondPay:Number(row["二補"])||0, shipping:Number(row["國內運費"])||0, link:row["下單連結"]||"", reconcileLink:row["對帳表連結"]||"", notes:row["備註"]||"", imageSrc:"", group:null, status:{notArrived:true, pendingShip:!!row["待出貨日"], shipped:!!row["已出貨日"], pickedUp:!!row["取貨日"]}, dates:{pendingShip:row["待出貨日"]||'', shipped:row["已出貨日"]||'', pickedUp:row["取貨日"]||''} }; }); items=[...newItems,...items]; saveData(); populateMonthFilter(); renderList(); showToast(`匯入 ${newItems.length} 筆`); }catch(err){showToast(err.message, "error");} finally{input.value='';} }; r.readAsArrayBuffer(f); }
-
-        function togglePinSetting() {
-            const isEnabled = document.getElementById('pinToggle').checked;
-            const area = document.getElementById('pinChangeArea');
-            appSettings.pinEnabled = isEnabled;
-            if(isEnabled) { area.classList.remove('hidden'); if(!appSettings.pin) appSettings.pin="0000"; showToast(`密碼已開啟`); } 
-            else { area.classList.add('hidden'); }
-            localStorage.setItem(SETTINGS_KEY, JSON.stringify(appSettings));
-        }
-        function saveNewPin() {
-            const newPin = document.getElementById('newPinInput').value;
-            if(newPin.length !== 4 || isNaN(newPin)) { showToast("請輸入4位數字", "error"); return; }
-            appSettings.pin = newPin;
-            localStorage.setItem(SETTINGS_KEY, JSON.stringify(appSettings));
-            showToast("密碼修改成功");
-            document.getElementById('newPinInput').value = '';
         }
     </script>
 </body>
