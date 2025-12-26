@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CORTIS (V14 日期增強版)</title>
+    <title>CORTIS (V15 最新版)</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
@@ -95,7 +95,7 @@
         .value { font-weight: 600; text-align: right; font-family: 'Inter', monospace; }
         .value.highlight { font-weight: 900; font-size: 16px; border-top: 1px dashed #999; padding-top: 5px; margin-top: 5px; }
         
-        /* 狀態勾選區 (新樣式) */
+        /* 狀態勾選區 */
         .checklist-col { padding: 10px 15px; background: #f9f9f9; border-top: 1px solid #eee; border-bottom: 1px solid #eee; display: flex; flex-direction: column; gap: 8px; }
         .check-group { display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
         .check-left { display: flex; align-items: center; gap: 5px; cursor: pointer; }
@@ -103,7 +103,6 @@
         .check-group.checked .check-box { background: #333; color: #fff; }
         .check-group.checked .check-label { font-weight: bold; }
         
-        /* 迷你日期選擇器 */
         .mini-date {
             border: none; background: transparent; font-size: 12px; color: #666;
             text-align: right; width: 110px; font-family: 'Inter', monospace;
@@ -116,6 +115,7 @@
         .action-btn:last-child { border: none; }
         .action-btn:disabled { color: #ccc; cursor: default; }
 
+        /* 表單樣式 */
         .form-container { background: var(--card-bg); padding: 20px; border: var(--border); }
         .form-row { display: flex; gap: 15px; margin-bottom: 15px; }
         .form-col { flex: 1; width: 50%; } 
@@ -135,6 +135,7 @@
         .info-input-item { flex: 1; text-align: center; }
         .info-input-item input { text-align: right; }
 
+        /* 設定頁 */
         .stats-box { background: var(--text-main); color: #fff; padding: 20px; margin-bottom: 20px; text-align: center; }
         .stats-big-num { font-size: 32px; font-weight: 900; font-family: monospace; }
         .settings-group { background: #fff; border: var(--border); padding: 20px; margin-bottom: 20px; }
@@ -206,13 +207,33 @@
             <form id="merchForm">
                 <input type="hidden" id="editId">
                 <div class="form-group"><label>商品名稱 <span style="color:red">*</span></label><input type="text" id="name" required></div>
-                <div class="form-row">
-                    <div class="form-col"><label>分類</label><select id="category"><option>周邊</option><option>專輯</option><option>小卡</option><option>票務</option><option>其他</option></select></div>
-                    <div class="form-col"><label>下單日期 <span style="color:red">*</span></label><input type="date" id="orderDate" required></div>
-                </div>
-                <div class="form-group"><label>賣家聯絡</label><div class="form-row" style="margin:0;"><div class="form-col"><input type="text" id="contact" placeholder="名稱"></div><div class="form-col"><input type="url" id="contactLink" placeholder="連結"></div></div></div>
-                <div class="form-group"><label>付款方式</label><select id="paymentType" onchange="toggleTransferFields()"><option value="Pending">待付款</option><option value="COD">貨到付款</option><option value="Transfer">銀行匯款</option></select></div>
                 
+                <div class="form-row">
+                    <div class="form-col">
+                        <label>分類</label>
+                        <select id="category"><option>周邊</option><option>專輯</option><option>小卡</option><option>票務</option><option>其他</option></select>
+                    </div>
+                    <div class="form-col">
+                        <label>下單日期 <span style="color:red">*</span></label><input type="date" id="orderDate" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>賣家聯絡方式</label>
+                    <div class="form-row" style="margin-bottom:0;">
+                        <div class="form-col"><input type="text" id="contact" placeholder="名稱 (例: 推特@abc)"></div>
+                        <div class="form-col"><input type="url" id="contactLink" placeholder="連結 (選填)"></div>
+                    </div>
+                </div>
+
+                <div class="form-group"><label>付款方式</label>
+                    <select id="paymentType" onchange="toggleTransferFields()">
+                        <option value="Pending">待付款</option>
+                        <option value="COD">貨到付款</option>
+                        <option value="Transfer">銀行匯款</option>
+                    </select>
+                </div>
+
                 <div id="transferFields" class="hidden">
                     <div class="form-row">
                         <div class="form-col"><label>匯款日期</label><input type="date" id="transferDate"></div>
@@ -265,7 +286,6 @@
         </div>
     </div>
 
-    <!-- 批量操作列 (含刪除按鈕) -->
     <div id="bulkActions" class="bulk-actions-bar">
         <div style="font-size:14px;">已選 <span id="selectedCount">0</span> 筆</div>
         <button class="bulk-btn" onclick="mergeSelectedItems()">🔗 合併</button>
@@ -281,8 +301,8 @@
 
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbyeGblocTD-g8e3yUbG0YSMBRbT-6Uwfu2gF09Bjgqt32C_GIjBwnl-Ni2-cfDwXQfl4g/exec";
-        const STORAGE_KEY = 'cortis_v14_data';
-        const SETTINGS_KEY = 'cortis_v14_settings';
+        const STORAGE_KEY = 'cortis_v15_data';
+        const SETTINGS_KEY = 'cortis_v15_settings';
         
         let items = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
         let appSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { pinEnabled: false, pin: "0000" };
@@ -321,7 +341,6 @@
             syncWithCloud();
         }
 
-        // --- 安全性 ---
         function togglePinSetting() {
             const isEnabled = document.getElementById('pinToggle').checked;
             const area = document.getElementById('pinChangeArea');
@@ -345,7 +364,6 @@
             document.getElementById('newPinInput').value = '';
         }
 
-        // --- 表單儲存 ---
         const form = document.getElementById('merchForm');
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -387,7 +405,7 @@
                     items.unshift({ 
                         id: Date.now(), ...rawData, imageSrc: imgData, group:null, 
                         status: {notArrived:true, pendingShip:false, shipped:false, pickedUp:false},
-                        dates: {pendingShip:'', shipped:'', pickedUp:''}, // 日期欄位初始化
+                        dates: {pendingShip:'', shipped:'', pickedUp:''},
                         refund: { isRefunded: false } 
                     });
                 }
@@ -418,7 +436,6 @@
             });
         }
 
-        // --- 核心邏輯 (同步/列表) ---
         async function syncWithCloud() {
             const ind = document.getElementById('syncIndicator');
             if(isSyncing) return; isSyncing = true; ind.className = 'sync-status loading';
@@ -479,19 +496,14 @@
             filtered.forEach(item => {
                 const total = (item.price||0) + (item.secondPay||0) + (item.shipping||0);
                 
-                // 狀態勾選與日期邏輯
                 let checksHtml = '';
                 STATUS_KEYS.forEach(k => {
                     const checked = item.status[k] ? 'checked' : '';
                     const dateVal = (item.dates && item.dates[k]) ? item.dates[k] : '';
-                    
-                    // 只有後三個狀態需要顯示日期輸入框
                     let dateInputHtml = '';
                     if (['pendingShip', 'shipped', 'pickedUp'].includes(k)) {
-                        // 確保只有勾選時才預設顯示今天，但 input 永遠存在方便查看
                         dateInputHtml = `<input type="date" class="mini-date" value="${dateVal}" onchange="updateStatusDate(${item.id}, '${k}', this.value)" onclick="event.stopPropagation()">`;
                     }
-
                     checksHtml += `
                         <div class="check-group ${checked}">
                             <div class="check-left" onclick="toggleStatus(${item.id}, '${k}')">
@@ -538,14 +550,11 @@
             updateBulkBar();
         }
 
-        // --- 狀態與日期邏輯 ---
         function toggleStatus(id, key) {
             const item = items.find(i => i.id === id);
             if(item) {
                 const newStatus = !item.status[key];
                 item.status[key] = newStatus;
-                
-                // 如果勾選且沒有日期，自動填入今天
                 if(newStatus && ['pendingShip', 'shipped', 'pickedUp'].includes(key)) {
                     if(!item.dates) item.dates = {};
                     if(!item.dates[key]) {
@@ -561,13 +570,11 @@
             if(item) {
                 if(!item.dates) item.dates = {};
                 item.dates[key] = dateValue;
-                // 如果填了日期，自動視為已勾選
                 if(dateValue && !item.status[key]) item.status[key] = true;
                 saveData();
             }
         }
 
-        // --- 批量操作 ---
         function toggleSelection(id) { if(selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id); renderList(); }
         function clearSelection() { selectedIds.clear(); renderList(); }
         function updateBulkBar() { const bar = document.getElementById('bulkActions'); if(selectedIds.size > 0) { bar.classList.add('active'); document.getElementById('selectedCount').innerText = selectedIds.size; } else { bar.classList.remove('active'); } }
@@ -576,7 +583,6 @@
         function ungroupItem(id) { if(confirm("移除併單？")) { const i = items.find(x => x.id === id); if(i) { i.group = null; saveData(); renderList(); } } }
         function toggleSort() { sortDesc = !sortDesc; renderList(); }
         
-        // --- 編輯與刪除 ---
         function editItem(id) {
             const item = items.find(i => i.id === id); if(!item) return;
             document.getElementById('editId').value = item.id; document.getElementById('name').value = item.name;
@@ -599,7 +605,7 @@
         function importData(input) { const f = input.files[0]; if(!f) return; const r = new FileReader(); r.onload=e=>{ try{ items=JSON.parse(e.target.result); saveData(); populateMonthFilter(); renderList(); alert('匯入成功'); }catch{ alert('錯誤'); } }; r.readAsText(f); }
         function clearAllData() { if(confirm('清空？')) { items=[]; saveData(); populateMonthFilter(); renderList(); } }
         
-        function downloadTemplate() { if(typeof XLSX==='undefined'){alert('網路錯誤');return;} const data=[{"商品名稱":"範例","分類":"周邊","下單日期":"2025-01-01","購買來源":"官網","賣家名稱":"@abc","賣家連結":"","付款方式 (待付款/貨到付款/銀行匯款)":"銀行匯款","匯款日期":"2025-01-01","匯款金額":500,"單價":500,"二補":0,"國際運費":60,"待出貨日":"","已出貨日":"","取貨日":"","訂購連結":"","對帳表連結":"","賣貨便連結":"","備註":""}]; XLSX.writeFile(XLSX.utils.book_new(XLSX.utils.book_append_sheet(XLSX.utils.book_new(), XLSX.utils.json_to_sheet(data), "Sheet1")), "CORTIS_V14範本.xlsx"); }
+        function downloadTemplate() { if(typeof XLSX==='undefined'){alert('網路錯誤');return;} const data=[{"商品名稱":"範例","分類":"周邊","下單日期":"2025-01-01","購買來源":"官網","賣家名稱":"@abc","賣家連結":"","付款方式 (待付款/貨到付款/銀行匯款)":"銀行匯款","匯款日期":"2025-01-01","匯款金額":500,"單價":500,"二補":0,"國際運費":60,"待出貨日":"","已出貨日":"","取貨日":"","訂購連結":"","對帳表連結":"","賣貨便連結":"","備註":""}]; XLSX.writeFile(XLSX.utils.book_new(XLSX.utils.book_append_sheet(XLSX.utils.book_new(), XLSX.utils.json_to_sheet(data), "Sheet1")), "CORTIS_V15範本.xlsx"); }
         function importExcel(input) { if(typeof XLSX==='undefined'){alert('網路錯誤');input.value='';return;} const f=input.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>{ try{ const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'}); const json=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]); if(json.length===0)throw new Error("無資料"); const newItems=json.map(row=>{ let pType="Pending"; const pRaw=row["付款方式 (待付款/貨到付款/銀行匯款)"]||""; if(pRaw.includes("貨到"))pType="COD"; else if(pRaw.includes("匯款"))pType="Transfer"; return { id:Date.now()+Math.floor(Math.random()*100000), name:row["商品名稱"]||"未命名", category:row["分類"]||"周邊", orderDate:row["下單日期"]||new Date().toISOString().split('T')[0], source:row["購買來源"]||"", contact:row["賣家名稱"]||"", contactLink:row["賣家連結"]||"", paymentType:pType, transferDate:row["匯款日期"]||"", transferAmount:Number(row["匯款金額"])||0, price:Number(row["單價"])||0, secondPay:Number(row["二補"])||0, shipping:Number(row["國際運費"])||0, link:row["訂購連結"]||"", reconcileLink:row["對帳表連結"]||"", sellerLink:row["賣貨便連結"]||"", notes:row["備註"]||"", imageSrc:"", group:null, status:{notArrived:true, pendingShip:!!row["待出貨日"], shipped:!!row["已出貨日"], pickedUp:!!row["取貨日"]}, dates:{pendingShip:row["待出貨日"]||'', shipped:row["已出貨日"]||'', pickedUp:row["取貨日"]||''} }; }); items=[...newItems,...items]; saveData(); populateMonthFilter(); renderList(); alert(`🎉 匯入 ${newItems.length} 筆`); }catch(err){alert("❌ "+err.message);} finally{input.value='';} }; r.readAsArrayBuffer(f); }
     </script>
 </body>
