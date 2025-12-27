@@ -3,19 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CORTIS (V32 賣家連結版)</title>
+    <title>CORTIS (V32 穩定修復)</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
         :root {
-            --bg-color: #F0ECE6;
-            --card-bg: #FFFFFF; 
+            --bg-color: #F0ECE6; --card-bg: #FFFFFF; 
             --text-main: #262626; --text-sub: #666666;
-            --border: 1px solid #E0E0E0;
-            --accent: #d63031; 
-            --nav-height: 70px; --select-color: #27ae60;
-            --radius: 12px;
+            --border: 1px solid #E0E0E0; --accent: #d63031; 
+            --nav-height: 70px; --select-color: #27ae60; --radius: 12px;
         }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { 
@@ -25,7 +22,7 @@
         }
 
         /* Toast 提示 */
-        #toast-container { position: fixed; top: 30px; left: 50%; transform: translateX(-50%); z-index: 12000; display: flex; flex-direction: column; gap: 10px; width: auto; max-width: 90%; pointer-events: none; }
+        #toast-container { position: fixed; top: 30px; left: 50%; transform: translateX(-50%); z-index: 20000; display: flex; flex-direction: column; gap: 10px; width: auto; max-width: 90%; pointer-events: none; }
         .toast {
             pointer-events: auto; padding: 12px 24px; border-radius: 50px; background: #fff; color: #333;
             box-shadow: 0 10px 40px rgba(0,0,0,0.15); font-weight: bold; font-size: 14px;
@@ -41,7 +38,7 @@
         /* 圖片檢視器 */
         #imageViewer {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95); z-index: 11000;
+            background: rgba(0,0,0,0.95); z-index: 15000;
             display: none; justify-content: center; align-items: center;
         }
         #imageViewer img { max-width: 95%; max-height: 80%; border-radius: 8px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
@@ -56,7 +53,7 @@
         /* 編輯彈窗 */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); z-index: 10500;
+            background: rgba(0,0,0,0.5); z-index: 11000;
             display: none; justify-content: center; align-items: end;
             backdrop-filter: blur(2px);
         }
@@ -73,13 +70,13 @@
         .close-modal { font-size: 28px; cursor: pointer; color: #999; padding: 5px; line-height: 1; }
 
         /* 鎖定畫面 */
-        #lockScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 9999; display: none; flex-direction: column; justify-content: center; align-items: center; }
+        #lockScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 21000; display: none; flex-direction: column; justify-content: center; align-items: center; }
         .pin-container { text-align: center; } .pin-title { font-size: 2rem; font-weight: 900; margin-bottom: 20px; }
         .pin-input { padding: 15px; font-size: 24px; text-align: center; letter-spacing: 10px; border: 2px solid var(--text-main); border-radius: 8px; width: 200px; background: #fff; outline: none; font-family: monospace; }
 
         /* 頂部工具 */
         .top-container {
-            background: var(--bg-color); position: sticky; top: 0; z-index: 40;
+            background: var(--bg-color); position: sticky; top: 0; z-index: 5000;
             border-bottom: 1px solid rgba(0,0,0,0.05); padding: 15px; margin-bottom: 5px;
         }
         .search-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
@@ -112,6 +109,7 @@
         .merch-card { background: var(--card-bg); border: 1px solid transparent; border-radius: var(--radius); box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; display: flex; flex-direction: column; position: relative; transition: all 0.2s; }
         .merch-card.selected { border: 2px solid var(--select-color); }
         
+        /* 選擇框 (無勾勾) */
         .card-select-overlay { position: absolute; top: 15px; right: 15px; z-index: 5; }
         .custom-checkbox { width: 24px; height: 24px; border: 2px solid #fff; background: rgba(0,0,0,0.3); backdrop-filter: blur(2px); border-radius: 6px; cursor: pointer; transition: 0.2s; }
         .merch-card.selected .custom-checkbox { background: var(--select-color); border-color: var(--select-color); }
@@ -128,10 +126,7 @@
         .remove-group { cursor: pointer; margin-left: 5px; opacity: 0.7; }
         .card-title { font-size: 16px; font-weight: 800; margin: 0 0 3px 0; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         .card-subtitle { font-size: 12px; color: #888; }
-        
-        /* 賣家連結樣式 */
-        .seller-link-active { color: #2980b9; text-decoration: underline; cursor: pointer; font-weight: bold; }
-        .seller-name-text { color: #333; }
+        .contact-link { color: #000; text-decoration: underline; font-weight: bold; cursor: pointer; }
         
         .info-grid { padding: 12px 15px; display: grid; grid-template-columns: 80px 1fr; gap: 6px; font-size: 13px; align-items: baseline; }
         .label { color: #888; font-weight: 500; text-align-last: justify; }
@@ -152,7 +147,8 @@
         .check-group.checked .mini-date { visibility: visible; }
 
         .seller-info { padding: 8px 15px; background: #fcfcfc; border-top: 1px solid #f5f5f5; font-size: 11px; color: #666; text-align: center; display: flex; justify-content: space-between; }
-        
+        .seller-link { color: #000; text-decoration: underline; cursor: pointer; }
+
         .card-actions { display: grid; grid-template-columns: repeat(4, 1fr); text-align: center; background: #fff; border-top: 1px solid #f5f5f5; }
         .action-btn { background: transparent; border: none; padding: 12px 0; font-size: 12px; font-weight: 600; border-right: 1px solid #f5f5f5; color: #555; cursor: pointer; }
         .action-btn:last-child { border: none; }
@@ -190,7 +186,7 @@
         input:checked + .slider { background-color: var(--text-main); }
         input:checked + .slider:before { transform: translateX(24px); }
 
-        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: var(--nav-height); background: #fff; border-top: 1px solid #eee; display: flex; justify-content: space-around; align-items: center; z-index: 100; padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -2px 10px rgba(0,0,0,0.03); }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: var(--nav-height); background: #fff; border-top: 1px solid #eee; display: flex; justify-content: space-around; align-items: center; z-index: 10000; padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -2px 10px rgba(0,0,0,0.03); }
         .nav-item { flex: 1; text-align: center; color: #aaa; font-size: 10px; font-weight: 600; cursor: pointer; padding-top: 10px; transition: color 0.2s; }
         .nav-item.active { color: var(--text-main); }
         .nav-icon { font-size: 22px; display: block; margin-bottom: 3px; }
@@ -431,25 +427,24 @@
             syncWithCloud();
         }
 
-        // --- 強制綁定函式 ---
-        window.showImage = function(src) {
+        function showImage(src) {
             if(!src) return;
             document.getElementById('fullImage').src = src;
             document.getElementById('imageViewer').style.display = 'flex';
-        };
+        }
 
-        window.toggleSort = function() { sortDesc = !sortDesc; renderList(); };
-        window.clearAddImage = function() { document.querySelector('#addForm [name="imageInput"]').value = ''; };
-        window.clearEditImage = function() { document.querySelector('#editForm [name="imageInput"]').value = ''; editImageTemp = ''; };
+        function toggleSort() { sortDesc = !sortDesc; renderList(); }
+        function clearAddImage() { document.querySelector('#addForm [name="imageInput"]').value = ''; }
+        function clearEditImage() { document.querySelector('#editForm [name="imageInput"]').value = ''; editImageTemp = ''; }
         
-        window.toggleTransferFields = function(select) { 
+        function toggleTransferFields(select) { 
             const form = select.closest('form');
             const div = form.querySelector('.transferFields');
             if (select.value === 'Transfer') div.classList.remove('hidden'); 
             else div.classList.add('hidden'); 
-        };
+        }
 
-        window.handleAddSubmit = async function(e) {
+        async function handleAddSubmit(e) {
             e.preventDefault();
             const form = e.target;
             const btn = form.querySelector('button[type="submit"]');
@@ -508,9 +503,9 @@
             } finally { 
                 btn.innerText = "儲存"; btn.disabled = false; 
             }
-        };
+        }
 
-        window.handleEditSubmit = async function(e) {
+        async function handleEditSubmit(e) {
             e.preventDefault();
             const form = e.target;
             const id = form.querySelector('[name="editId"]').value;
@@ -551,9 +546,9 @@
             closeEditModal();
             renderList();
             showToast("修改成功！");
-        };
+        }
 
-        window.openEditModal = function(id) {
+        function openEditModal(id) {
             const item = items.find(i => String(i.id) === String(id));
             if (!item) return;
             
@@ -582,22 +577,22 @@
             else transferDiv.classList.add('hidden');
             
             document.getElementById('editModal').classList.add('active');
-        };
+        }
 
-        window.closeEditModal = function() {
+        function closeEditModal() {
             document.getElementById('editModal').classList.remove('active');
             editImageTemp = null;
-        };
+        }
 
-        window.toggleSelection = function(id) { 
+        function toggleSelection(id) { 
             id = String(id);
             if(selectedIds.has(id)) selectedIds.delete(id); 
             else selectedIds.add(id); 
             renderList(); 
             updateBulkBar(); 
-        };
+        }
 
-        window.toggleStatus = function(id, key) {
+        function toggleStatus(id, key) {
             const item = items.find(i => String(i.id) === String(id));
             if(item) {
                 const newStatus = !item.status[key];
@@ -611,9 +606,9 @@
                 }
                 saveData(); renderList();
             }
-        };
+        }
 
-        window.updateStatusDate = function(id, key, dateValue) {
+        function updateStatusDate(id, key, dateValue) {
             const item = items.find(i => String(i.id) === String(id));
             if(item) {
                 if(!item.dates) item.dates = {};
@@ -621,34 +616,34 @@
                 if(dateValue && !item.status[key]) item.status[key] = true;
                 saveData();
             }
-        };
+        }
 
-        window.deleteItem = function(id) { 
+        function deleteItem(id) { 
             if(confirm('確定要刪除這筆紀錄嗎？')) { 
                 items = items.filter(i => String(i.id) !== String(id)); 
                 if(selectedIds.has(String(id))) selectedIds.delete(String(id)); 
                 saveData(); renderList(); populateMonthFilter(); 
             } 
-        };
+        }
 
-        window.deleteSelectedItems = function() { 
+        function deleteSelectedItems() { 
             if(confirm(`確定刪除選取的 ${selectedIds.size} 筆資料？`)) { 
                 items = items.filter(i => !selectedIds.has(String(i.id))); 
                 selectedIds.clear(); 
                 saveData(); renderList(); populateMonthFilter(); updateBulkBar();
             } 
-        };
+        }
 
-        window.mergeSelectedItems = function() { 
+        function mergeSelectedItems() { 
             const name = prompt("輸入併單名稱:"); 
             if(name) { 
                 items.forEach(i => { if(selectedIds.has(String(i.id))) i.group = name; }); 
                 selectedIds.clear(); 
                 saveData(); renderList(); updateBulkBar();
             } 
-        };
+        }
 
-        window.selectAllVisible = function() {
+        function selectAllVisible() {
             const keyword = document.getElementById('searchInput').value.toLowerCase();
             const monthVal = document.getElementById('monthFilter').value;
             const catVal = document.getElementById('categoryFilter').value;
@@ -660,10 +655,10 @@
             });
             filtered.forEach(i => selectedIds.add(String(i.id)));
             renderList(); updateBulkBar();
-        };
+        }
 
-        window.clearSelection = function() { selectedIds.clear(); renderList(); updateBulkBar(); };
-        window.ungroupItem = function(id) { if(confirm("移除併單？")) { const i = items.find(x => String(x.id) === String(id)); if(i) { i.group = null; saveData(); renderList(); } } };
+        function clearSelection() { selectedIds.clear(); renderList(); updateBulkBar(); }
+        function ungroupItem(id) { if(confirm("移除併單？")) { const i = items.find(x => String(x.id) === String(id)); if(i) { i.group = null; saveData(); renderList(); } } }
 
         function updateSyncStatus(status) {
             const box = document.getElementById('syncWrapper');
@@ -677,20 +672,19 @@
         function saveData() {
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); updateSummary();
-                // 自動上傳
-                uploadToCloud(true);
+                fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(items) });
             } catch (e) { showToast("儲存空間不足", "error"); }
         }
 
-        window.uploadToCloud = function(silent = false) { 
+        function uploadToCloud(silent = false) { 
             if(!silent) showToast("正在上傳...", "loading");
             updateSyncStatus('loading');
             fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(items) })
             .then(()=>{ if(!silent) showToast("✅ 上傳成功！"); updateSyncStatus('ok'); })
             .catch(()=>{ if(!silent) showToast("❌ 上傳失敗", "error"); updateSyncStatus('error'); }); 
-        };
+        }
 
-        window.downloadFromCloud = function(silent = false) {
+        function downloadFromCloud(silent = false) {
             if(!silent) showToast("正在下載...", "loading");
             updateSyncStatus('loading');
             fetch(API_URL)
@@ -709,7 +703,7 @@
                 }
             })
             .catch(e => { if(!silent) showToast("❌ 下載失敗", "error"); updateSyncStatus('error'); });
-        };
+        }
         
         async function syncWithCloud() {
             if(isSyncing) return; isSyncing = true; updateSyncStatus('loading');
@@ -723,7 +717,6 @@
             } catch(e) { updateSyncStatus('error'); } finally { isSyncing = false; }
         }
 
-        // Excel 智慧邏輯 (V31)
         function findKey(row, keywords) {
             const keys = Object.keys(row);
             for (let k of keys) {
@@ -750,28 +743,27 @@
             return "";
         }
 
-        window.downloadTemplate = function() { 
+        function downloadTemplate() { 
             if(typeof XLSX==='undefined'){showToast('網路錯誤: Excel工具未載入', 'error');return;} 
             const data=[{"商品名稱":"範例","分類":"周邊","下單日期":"2025-01-01","購買來源":"官網","賣家名稱":"@abc","賣家連結":"","付款方式":"銀行匯款","匯款日期":"2025-01-01","匯款金額":500,"單價":500,"二補":0,"國內運費":60,"待出貨日":"","已出貨日":"","取貨日":"","下單連結":"","對帳表連結":"","備註":""}]; 
             XLSX.writeFile(XLSX.utils.book_new(XLSX.utils.book_append_sheet(XLSX.utils.book_new(), XLSX.utils.json_to_sheet(data), "Sheet1")), "CORTIS_V31範本.xlsx"); 
-        };
+        }
 
-        window.exportData = function() { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(items,null,2)],{type:'application/json'})); a.download = `backup_${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); };
+        function exportData() { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(items,null,2)],{type:'application/json'})); a.download = `backup_${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
         
-        window.importData = function(input) { 
+        function importData(input) { 
             const f = input.files[0]; if(!f) return; 
             const r = new FileReader(); 
             r.onload=e=>{ try{ items=JSON.parse(e.target.result); saveData(); populateMonthFilter(); renderList(); showToast("✅ JSON 匯入成功！"); }catch{ showToast("❌ 格式錯誤", "error"); } }; 
             r.readAsText(f); 
-        };
+        }
         
-        window.clearAllData = function() { if(confirm('清空？')) { items=[]; saveData(); populateMonthFilter(); renderList(); } };
+        function clearAllData() { if(confirm('清空？')) { items=[]; saveData(); populateMonthFilter(); renderList(); } }
 
-        window.importExcel = function(input) { 
+        function importExcel(input) { 
             if(typeof XLSX==='undefined'){showToast('網路錯誤', 'error');input.value='';return;} 
             const f=input.files[0]; if(!f)return; 
             const r=new FileReader(); 
-            
             r.onload=e=>{ 
                 try { 
                     const wb = XLSX.read(new Uint8Array(e.target.result), {
@@ -784,15 +776,11 @@
                     if(json.length===0)throw new Error("無資料"); 
                     
                     const newItems = json.map(row => { 
-                        // 1. 智慧付款方式辨識
                         let pType="Pending"; 
-                        // 嘗試抓取含有 "付款" 的欄位
                         const pRaw = String(findKey(row, ["付款"]) || "");
-                        
                         if(pRaw.match(/貨|取|COD/)) pType="COD"; 
                         else if(pRaw.match(/匯|轉|ATM|銀行|Transfer/)) pType="Transfer"; 
 
-                        // 2. 智慧欄位抓取
                         const price = Number(findKey(row, ["單價", "本體", "Price"])) || 0;
                         const secondPay = Number(findKey(row, ["二補", "補款"])) || 0;
                         const shipping = Number(findKey(row, ["運費", "Shipping"])) || 0;
@@ -830,22 +818,12 @@
                             } 
                         }; 
                     }); 
-                    
-                    items=[...newItems,...items]; 
-                    saveData(); 
-                    populateMonthFilter(); 
-                    renderList(); 
-                    showToast(`🎉 成功匯入 ${newItems.length} 筆`); 
-                } catch(err) {
-                    showToast("❌ "+err.message, "error");
-                } finally {
-                    input.value='';
-                } 
+                    items=[...newItems,...items]; saveData(); populateMonthFilter(); renderList(); showToast(`🎉 成功匯入 ${newItems.length} 筆`); 
+                } catch(err) { showToast("❌ "+err.message, "error"); } finally { input.value=''; } 
             }; 
             r.readAsArrayBuffer(f); 
         }
 
-        // 安全性
         function togglePinSetting() {
             const isEnabled = document.getElementById('pinToggle').checked;
             const area = document.getElementById('pinChangeArea');
@@ -880,6 +858,42 @@
                 };
                 reader.onerror = reject;
             });
+        }
+
+        function switchView(view, el) {
+            Object.values(views).forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            views[view].classList.add('active'); 
+            if(el) el.classList.add('active');
+            
+            if(view === 'home') { renderList(); updateBulkBar(); }
+            else { document.getElementById('bulkActions').classList.remove('active'); }
+            window.scrollTo(0,0);
+        }
+
+        function openSubPage(page) {
+            Object.values(views).forEach(v => v.classList.remove('active'));
+            if(page === 'main') views.settings.classList.add('active');
+            else if(page === 'data') views.settingsData.classList.add('active');
+            else if(page === 'security') views.settingsSecurity.classList.add('active');
+            document.getElementById('bulkActions').classList.remove('active');
+            window.scrollTo(0,0);
+        }
+
+        function populateMonthFilter() {
+            const select = document.getElementById('monthFilter');
+            const currentVal = select.value;
+            const months = [...new Set(items.map(i => i.orderDate.substring(0, 7)))].sort().reverse();
+            let html = '<option value="all">📅 所有月份</option>';
+            months.forEach(m => { const [y, mm] = m.split('-'); html += `<option value="${m}">${y}年 ${mm}月</option>`; });
+            select.innerHTML = html;
+            if(months.includes(currentVal)) select.value = currentVal; else select.value = "all";
+        }
+
+        function updateSummary(filteredItems = items) {
+            const total = filteredItems.reduce((acc, i) => acc + (i.price||0) + (i.secondPay||0) + (i.shipping||0), 0);
+            document.getElementById('summaryTotal').innerText = `NT$ ${total.toLocaleString()}`;
+            document.getElementById('summaryCount').innerText = filteredItems.length;
         }
     </script>
 </body>
