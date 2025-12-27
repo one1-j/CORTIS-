@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CORTIS (V31 智慧欄位版)</title>
+    <title>CORTIS (V32 賣家連結版)</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
@@ -128,7 +128,10 @@
         .remove-group { cursor: pointer; margin-left: 5px; opacity: 0.7; }
         .card-title { font-size: 16px; font-weight: 800; margin: 0 0 3px 0; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         .card-subtitle { font-size: 12px; color: #888; }
-        .contact-link { color: #000; text-decoration: underline; font-weight: bold; cursor: pointer; }
+        
+        /* 賣家連結樣式 */
+        .seller-link-active { color: #2980b9; text-decoration: underline; cursor: pointer; font-weight: bold; }
+        .seller-name-text { color: #333; }
         
         .info-grid { padding: 12px 15px; display: grid; grid-template-columns: 80px 1fr; gap: 6px; font-size: 13px; align-items: baseline; }
         .label { color: #888; font-weight: 500; text-align-last: justify; }
@@ -149,8 +152,7 @@
         .check-group.checked .mini-date { visibility: visible; }
 
         .seller-info { padding: 8px 15px; background: #fcfcfc; border-top: 1px solid #f5f5f5; font-size: 11px; color: #666; text-align: center; display: flex; justify-content: space-between; }
-        .seller-link { color: #000; text-decoration: underline; cursor: pointer; }
-
+        
         .card-actions { display: grid; grid-template-columns: repeat(4, 1fr); text-align: center; background: #fff; border-top: 1px solid #f5f5f5; }
         .action-btn { background: transparent; border: none; padding: 12px 0; font-size: 12px; font-weight: 600; border-right: 1px solid #f5f5f5; color: #555; cursor: pointer; }
         .action-btn:last-child { border: none; }
@@ -429,6 +431,7 @@
             syncWithCloud();
         }
 
+        // --- 強制綁定函式 ---
         window.showImage = function(src) {
             if(!src) return;
             document.getElementById('fullImage').src = src;
@@ -674,7 +677,8 @@
         function saveData() {
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); updateSummary();
-                fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(items) });
+                // 自動上傳
+                uploadToCloud(true);
             } catch (e) { showToast("儲存空間不足", "error"); }
         }
 
@@ -719,153 +723,6 @@
             } catch(e) { updateSyncStatus('error'); } finally { isSyncing = false; }
         }
 
-        // --- 介面邏輯 ---
-        window.switchView = function(view, el) {
-            Object.values(views).forEach(v => v.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            views[view].classList.add('active'); 
-            if(el) el.classList.add('active');
-            
-            if(view === 'home') { renderList(); updateBulkBar(); }
-            else { document.getElementById('bulkActions').classList.remove('active'); }
-            window.scrollTo(0,0);
-        };
-
-        window.renderList = function() {
-            const grid = document.getElementById('merchGrid'); grid.innerHTML = '';
-            const keyword = document.getElementById('searchInput').value.toLowerCase();
-            const monthVal = document.getElementById('monthFilter').value;
-            const catVal = document.getElementById('categoryFilter').value;
-
-            let filtered = items.filter(i => {
-                const matchK = (i.name||'').toLowerCase().includes(keyword);
-                const matchM = monthVal === 'all' || i.orderDate.startsWith(monthVal);
-                const matchC = catVal === 'all' || i.category === catVal;
-                return matchK && matchM && matchC;
-            });
-
-            filtered.sort((a,b) => sortDesc ? new Date(b.orderDate)-new Date(a.orderDate) : new Date(a.orderDate)-new Date(b.orderDate));
-            document.getElementById('emptyState').style.display = filtered.length ? 'none' : 'block';
-            updateSummary(filtered);
-
-            filtered.forEach(item => {
-                const total = (item.price||0) + (item.secondPay||0) + (item.shipping||0);
-                
-                let checksHtml = '';
-                STATUS_KEYS.forEach(k => {
-                    const checked = item.status[k] ? 'checked' : '';
-                    const dateVal = (item.dates && item.dates[k]) ? item.dates[k] : '';
-                    let dateInputHtml = '';
-                    if (['pendingShip', 'shipped', 'pickedUp'].includes(k)) {
-                        const style = checked ? '' : 'visibility:hidden; height:0;';
-                        dateInputHtml = `<input type="date" class="mini-date" value="${dateVal}" style="${style}" onchange="updateStatusDate('${item.id}', '${k}', this.value)" onclick="event.stopPropagation()">`;
-                    }
-                    checksHtml += `
-                        <div class="check-group ${checked}">
-                            <div class="check-left" onclick="toggleStatus('${item.id}', '${k}')">
-                                <div class="check-box"></div>
-                                <span class="check-label">${STATUS_LABELS[k]}</span>
-                            </div>
-                            ${dateInputHtml}
-                        </div>`;
-                });
-
-                let contactDisplay = item.contact || '-';
-                if(item.contactLink) contactDisplay = `<a class="contact-link" onclick="window.open('${item.contactLink}', '_blank')">${item.contact || '連結'}</a>`;
-                let groupHtml = item.group ? `<span class="group-tag">📦 ${item.group} <span class="remove-group" onclick="ungroupItem('${item.id}')">×</span></span>` : '';
-                
-                const isSelected = selectedIds.has(String(item.id)) ? 'selected' : '';
-                const checkMark = selectedIds.has(String(item.id)) ? '' : ''; 
-                const openUrl = (url) => url ? `window.open('${url}','_blank')` : '';
-                const btnStyle = (url) => url ? '' : 'color:#ccc; cursor:default;';
-
-                const noteBtnText = item.notes ? "查看備註" : "無備註";
-                const noteBtnColor = item.notes ? "#333" : "#999";
-                const noteContent = item.notes || "無內容";
-                
-                let payText = PAYMENT_LABELS[item.paymentType] || item.paymentType;
-                if(item.paymentType === 'Transfer' && item.transferDate) {
-                    payText += ` (${item.transferDate})`;
-                }
-
-                const card = document.createElement('div');
-                card.className = `merch-card ${isSelected}`;
-                const imgClick = item.imageSrc ? `onclick="showImage('${item.imageSrc}'); event.stopPropagation();"` : '';
-                const imgHtml = item.imageSrc ? `<img src="${item.imageSrc}" class="card-thumb" ${imgClick}>` : `<div class="card-thumb"></div>`;
-
-                card.innerHTML = `
-                    <div class="card-select-overlay" onclick="toggleSelection('${item.id}'); event.stopPropagation();"><div class="custom-checkbox">${checkMark}</div></div>
-                    <div class="card-status-bar">${STATUS_KEYS.map(k => `<div class="status-segment ${item.status[k]?'active':''}"></div>`).join('')}</div>
-                    <div class="card-header">${imgHtml}
-                        <div class="card-title-group"><div>${groupHtml}<span class="category-tag">${item.category||'周邊'}</span></div><div class="card-title">${item.name}</div><div class="card-subtitle">${item.orderDate} · ${item.source||''}</div></div>
-                    </div>
-                    <div class="info-grid">
-                        <span class="label">付款方式</span><span class="value" style="font-size:13px;">${payText}</span>
-                        <span class="label">單價</span><span class="value">${item.price||0}</span>
-                        <span class="label">二補</span><span class="value">${item.secondPay||0}</span>
-                        <span class="label">國內運費</span><span class="value">${item.shipping||0}</span>
-                        <span class="label" style="font-weight:900; color:#000;">總計</span><span class="value highlight">NT$ ${total}</span>
-                    </div>
-                    
-                    <button class="note-toggle-btn" style="color:${noteBtnColor}" onclick="toggleNote(this)">${noteBtnText}</button>
-                    <div class="note-content">${noteContent}</div>
-                    
-                    <div class="checklist-col">${checksHtml}</div>
-                    
-                    <div class="seller-info"><span>賣家資訊</span><span>${contactDisplay}</span></div>
-
-                    <div class="card-actions">
-                        <button class="action-btn" onclick="openEditModal('${item.id}')">編輯</button>
-                        <button class="action-btn" onclick="${openUrl(item.link)}" style="${btnStyle(item.link)}">下單連結</button>
-                        <button class="action-btn" onclick="${openUrl(item.reconcileLink)}" style="${btnStyle(item.reconcileLink)}">對帳表</button>
-                        <button class="action-btn text-red" onclick="deleteItem('${item.id}')">刪除</button>
-                    </div>`;
-                grid.appendChild(card);
-            });
-            updateBulkBar();
-        };
-
-        function updateBulkBar() { 
-            const bar = document.getElementById('bulkActions'); 
-            const isHome = document.getElementById('view-home').classList.contains('active');
-            if(selectedIds.size > 0 && isHome) { 
-                bar.classList.add('active'); 
-                document.getElementById('selectedCount').innerText = selectedIds.size; 
-            } else { bar.classList.remove('active'); } 
-        }
-
-        window.toggleNote = function(btn) {
-            const content = btn.nextElementSibling;
-            if(content.innerText === "無內容") return;
-            content.classList.toggle('show');
-            btn.innerHTML = content.classList.contains('show') ? "隱藏備註" : "查看備註";
-        };
-
-        function updateSummary(filteredItems = items) {
-            const total = filteredItems.reduce((acc, i) => acc + (i.price||0) + (i.secondPay||0) + (i.shipping||0), 0);
-            document.getElementById('summaryTotal').innerText = `NT$ ${total.toLocaleString()}`;
-            document.getElementById('summaryCount').innerText = filteredItems.length;
-        }
-
-        function populateMonthFilter() {
-            const select = document.getElementById('monthFilter');
-            const currentVal = select.value;
-            const months = [...new Set(items.map(i => i.orderDate.substring(0, 7)))].sort().reverse();
-            let html = '<option value="all">📅 所有月份</option>';
-            months.forEach(m => { const [y, mm] = m.split('-'); html += `<option value="${m}">${y}年 ${mm}月</option>`; });
-            select.innerHTML = html;
-            if(months.includes(currentVal)) select.value = currentVal; else select.value = "all";
-        }
-
-        window.openSubPage = function(page) {
-            Object.values(views).forEach(v => v.classList.remove('active'));
-            if(page === 'main') views.settings.classList.add('active');
-            else if(page === 'data') views.settingsData.classList.add('active');
-            else if(page === 'security') views.settingsSecurity.classList.add('active');
-            document.getElementById('bulkActions').classList.remove('active');
-            window.scrollTo(0,0);
-        };
-
         // Excel 智慧邏輯 (V31)
         function findKey(row, keywords) {
             const keys = Object.keys(row);
@@ -895,7 +752,7 @@
 
         window.downloadTemplate = function() { 
             if(typeof XLSX==='undefined'){showToast('網路錯誤: Excel工具未載入', 'error');return;} 
-            const data=[{"商品名稱":"範例","分類":"周邊","下單日期":"2025-01-01","購買來源":"官網","賣家名稱":"@abc","賣家連結":"","付款方式":"銀行匯款","匯款日期":"2025-01-01","匯款金額":500,"單價":500,"二補":0,"國內運費":60,"待出貨日":"","已出貨日":"","取貨日":"","下單連結":"","對帳表連結":"","賣貨便連結":"","備註":""}]; 
+            const data=[{"商品名稱":"範例","分類":"周邊","下單日期":"2025-01-01","購買來源":"官網","賣家名稱":"@abc","賣家連結":"","付款方式":"銀行匯款","匯款日期":"2025-01-01","匯款金額":500,"單價":500,"二補":0,"國內運費":60,"待出貨日":"","已出貨日":"","取貨日":"","下單連結":"","對帳表連結":"","備註":""}]; 
             XLSX.writeFile(XLSX.utils.book_new(XLSX.utils.book_append_sheet(XLSX.utils.book_new(), XLSX.utils.json_to_sheet(data), "Sheet1")), "CORTIS_V31範本.xlsx"); 
         };
 
