@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CORTIS (V30 最終修正)</title>
+    <title>CORTIS (V31 智慧欄位版)</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
@@ -219,6 +219,7 @@
         </div>
     </div>
 
+    <!-- 編輯彈窗 -->
     <div id="editModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -245,6 +246,7 @@
         </div>
     </div>
 
+    <!-- 列表頁 -->
     <div id="view-home" class="view-section active">
         <div class="top-container">
             <div class="search-row">
@@ -280,6 +282,7 @@
         <div id="emptyState" style="text-align:center; padding:50px; color:#999; display:none;">目前沒有紀錄</div>
     </div>
 
+    <!-- 新增頁 -->
     <div id="view-add" class="view-section">
         <div class="form-container">
             <form id="addForm" onsubmit="handleAddSubmit(event)">
@@ -301,14 +304,17 @@
         </div>
     </div>
 
+    <!-- 管理頁 -->
     <div id="view-settings" class="view-section">
         <h2 class="page-title">管理</h2>
         <button class="settings-menu-btn" onclick="openSubPage('data')">📂 資料匯入 / 備份</button>
         <button class="settings-menu-btn" onclick="openSubPage('security')">🔒 安全性設定</button>
     </div>
 
+    <!-- 資料匯入/備份 子頁面 -->
     <div id="view-settings-data" class="view-section">
         <h2 class="page-title"><button class="back-btn" onclick="openSubPage('main')">←</button> 資料管理</h2>
+        
         <div class="section-header">Excel 整合</div>
         <div class="clean-btn-group">
             <button class="clean-btn" onclick="downloadTemplate()">📊 下載 Excel 範本 <span>›</span></button>
@@ -317,6 +323,7 @@
                 <input type="file" id="excelInput" onchange="importExcel(this)" accept=".xlsx, .xls, .csv" style="display:none;">
             </div>
         </div>
+
         <div class="section-header">系統備份</div>
         <div class="clean-btn-group">
             <button class="clean-btn" onclick="exportData()">⬇ 下載 JSON 備份 <span>›</span></button>
@@ -325,12 +332,16 @@
                 <input type="file" id="jsonInput" onchange="importData(this)" accept=".json" style="display:none;">
             </div>
         </div>
-        <div class="section-header">重置</div>
+
+        <div class="section-header">雲端與重置</div>
         <div class="clean-btn-group">
+            <button class="clean-btn" onclick="uploadToCloud()">⬆ 上傳至雲端 (備份) <span>›</span></button>
+            <button class="clean-btn" onclick="downloadFromCloud()">⬇ 從雲端下載 (還原) <span>›</span></button>
             <button class="clean-btn danger" onclick="clearAllData()">⚠ 清空所有資料</button>
         </div>
     </div>
 
+    <!-- 安全性 子頁面 -->
     <div id="view-settings-security" class="view-section">
         <h2 class="page-title"><button class="back-btn" onclick="openSubPage('main')">←</button> 安全性</h2>
         <div class="settings-card" style="background:#fff; padding:20px; border-radius:12px; border:1px solid #eee;">
@@ -345,6 +356,7 @@
         </div>
     </div>
 
+    <!-- 批量操作列 -->
     <div id="bulkActions" class="bulk-actions-bar">
         <div style="font-size:12px;">已選 <span id="selectedCount">0</span> 筆</div>
         <button class="bulk-btn select-all" onclick="selectAllVisible()">✅ 全選</button>
@@ -361,8 +373,8 @@
 
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbyeGblocTD-g8e3yUbG0YSMBRbT-6Uwfu2gF09Bjgqt32C_GIjBwnl-Ni2-cfDwXQfl4g/exec";
-        const STORAGE_KEY = 'cortis_v30_data';
-        const SETTINGS_KEY = 'cortis_v30_settings';
+        const STORAGE_KEY = 'cortis_v31_data';
+        const SETTINGS_KEY = 'cortis_v31_settings';
         
         let items = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
         let appSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { pinEnabled: false, pin: "0000" };
@@ -666,6 +678,48 @@
             } catch (e) { showToast("儲存空間不足", "error"); }
         }
 
+        window.uploadToCloud = function(silent = false) { 
+            if(!silent) showToast("正在上傳...", "loading");
+            updateSyncStatus('loading');
+            fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(items) })
+            .then(()=>{ if(!silent) showToast("✅ 上傳成功！"); updateSyncStatus('ok'); })
+            .catch(()=>{ if(!silent) showToast("❌ 上傳失敗", "error"); updateSyncStatus('error'); }); 
+        };
+
+        window.downloadFromCloud = function(silent = false) {
+            if(!silent) showToast("正在下載...", "loading");
+            updateSyncStatus('loading');
+            fetch(API_URL)
+            .then(res => res.json())
+            .then(cloudData => {
+                if(Array.isArray(cloudData)) {
+                    if(cloudData.length > 0 || !silent) {
+                        items = cloudData;
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+                        renderList(); populateMonthFilter();
+                        if(!silent) showToast("✅ 資料已還原！");
+                        updateSyncStatus('ok');
+                    }
+                } else {
+                    if(!silent) showToast("❌ 雲端無資料", "error");
+                }
+            })
+            .catch(e => { if(!silent) showToast("❌ 下載失敗", "error"); updateSyncStatus('error'); });
+        };
+        
+        async function syncWithCloud() {
+            if(isSyncing) return; isSyncing = true; updateSyncStatus('loading');
+            try {
+                const res = await fetch(API_URL); const cloudData = await res.json();
+                if(Array.isArray(cloudData) && cloudData.length >= items.length) {
+                    items = cloudData; localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+                    renderList(); populateMonthFilter();
+                }
+                updateSyncStatus('ok');
+            } catch(e) { updateSyncStatus('error'); } finally { isSyncing = false; }
+        }
+
+        // --- 介面邏輯 ---
         window.switchView = function(view, el) {
             Object.values(views).forEach(v => v.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -812,48 +866,17 @@
             window.scrollTo(0,0);
         };
 
-        window.uploadToCloud = function(silent = false) { 
-            if(!silent) showToast("正在上傳...", "loading");
-            updateSyncStatus('loading');
-            fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(items) })
-            .then(()=>{ if(!silent) showToast("✅ 上傳成功！"); updateSyncStatus('ok'); })
-            .catch(()=>{ if(!silent) showToast("❌ 上傳失敗", "error"); updateSyncStatus('error'); }); 
-        };
-
-        window.downloadFromCloud = function(silent = false) {
-            if(!silent) showToast("正在下載...", "loading");
-            updateSyncStatus('loading');
-            fetch(API_URL)
-            .then(res => res.json())
-            .then(cloudData => {
-                if(Array.isArray(cloudData)) {
-                    if(cloudData.length > 0 || !silent) {
-                        items = cloudData;
-                        localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-                        renderList(); populateMonthFilter();
-                        if(!silent) showToast("✅ 資料已還原！");
-                        updateSyncStatus('ok');
-                    }
-                } else {
-                    if(!silent) showToast("❌ 雲端無資料", "error");
+        // Excel 智慧邏輯 (V31)
+        function findKey(row, keywords) {
+            const keys = Object.keys(row);
+            for (let k of keys) {
+                for (let word of keywords) {
+                    if (k.includes(word)) return row[k];
                 }
-            })
-            .catch(e => { if(!silent) showToast("❌ 下載失敗", "error"); updateSyncStatus('error'); });
-        };
-        
-        async function syncWithCloud() {
-            if(isSyncing) return; isSyncing = true; updateSyncStatus('loading');
-            try {
-                const res = await fetch(API_URL); const cloudData = await res.json();
-                if(Array.isArray(cloudData) && cloudData.length >= items.length) {
-                    items = cloudData; localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-                    renderList(); populateMonthFilter();
-                }
-                updateSyncStatus('ok');
-            } catch(e) { updateSyncStatus('error'); } finally { isSyncing = false; }
+            }
+            return ""; 
         }
 
-        // Excel 智慧邏輯 (V30移植)
         function formatExcelDate(dateVal) {
             if (!dateVal) return "";
             if (dateVal instanceof Date) {
@@ -872,8 +895,8 @@
 
         window.downloadTemplate = function() { 
             if(typeof XLSX==='undefined'){showToast('網路錯誤: Excel工具未載入', 'error');return;} 
-            const data=[{"商品名稱":"範例","分類":"周邊","下單日期":"2025-01-01","購買來源":"官網","賣家名稱":"@abc","賣家連結":"","付款方式 (待付款/貨到付款/銀行匯款)":"銀行匯款","匯款日期":"2025-01-01","匯款金額":500,"單價":500,"二補":0,"國內運費":60,"待出貨日":"","已出貨日":"","取貨日":"","下單連結":"","對帳表連結":"","備註":""}]; 
-            XLSX.writeFile(XLSX.utils.book_new(XLSX.utils.book_append_sheet(XLSX.utils.book_new(), XLSX.utils.json_to_sheet(data), "Sheet1")), "CORTIS_V30範本.xlsx"); 
+            const data=[{"商品名稱":"範例","分類":"周邊","下單日期":"2025-01-01","購買來源":"官網","賣家名稱":"@abc","賣家連結":"","付款方式":"銀行匯款","匯款日期":"2025-01-01","匯款金額":500,"單價":500,"二補":0,"國內運費":60,"待出貨日":"","已出貨日":"","取貨日":"","下單連結":"","對帳表連結":"","賣貨便連結":"","備註":""}]; 
+            XLSX.writeFile(XLSX.utils.book_new(XLSX.utils.book_append_sheet(XLSX.utils.book_new(), XLSX.utils.json_to_sheet(data), "Sheet1")), "CORTIS_V31範本.xlsx"); 
         };
 
         window.exportData = function() { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(items,null,2)],{type:'application/json'})); a.download = `backup_${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); };
@@ -891,37 +914,81 @@
             if(typeof XLSX==='undefined'){showToast('網路錯誤', 'error');input.value='';return;} 
             const f=input.files[0]; if(!f)return; 
             const r=new FileReader(); 
+            
             r.onload=e=>{ 
                 try { 
-                    const wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array', cellDates: true, dateNF: 'yyyy-mm-dd'}); 
+                    const wb = XLSX.read(new Uint8Array(e.target.result), {
+                        type: 'array',
+                        cellDates: true, 
+                        dateNF: 'yyyy-mm-dd'
+                    }); 
                     const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]); 
+                    
                     if(json.length===0)throw new Error("無資料"); 
+                    
                     const newItems = json.map(row => { 
+                        // 1. 智慧付款方式辨識
                         let pType="Pending"; 
-                        const pRaw = String(row["付款方式 (待付款/貨到付款/銀行匯款)"]||"");
-                        if(pRaw.match(/貨|取付|COD/)) pType="COD"; 
-                        else if(pRaw.match(/匯|轉|銀行|ATM|Transfer/)) pType="Transfer"; 
+                        // 嘗試抓取含有 "付款" 的欄位
+                        const pRaw = String(findKey(row, ["付款"]) || "");
+                        
+                        if(pRaw.match(/貨|取|COD/)) pType="COD"; 
+                        else if(pRaw.match(/匯|轉|ATM|銀行|Transfer/)) pType="Transfer"; 
+
+                        // 2. 智慧欄位抓取
+                        const price = Number(findKey(row, ["單價", "本體", "Price"])) || 0;
+                        const secondPay = Number(findKey(row, ["二補", "補款"])) || 0;
+                        const shipping = Number(findKey(row, ["運費", "Shipping"])) || 0;
+                        const transferAmount = Number(findKey(row, ["匯款金額", "金額"])) || 0;
+
                         return { 
                             id:String(Date.now()+Math.floor(Math.random()*100000)), 
-                            name:row["商品名稱"]||"未命名", category:row["分類"]||"周邊", 
-                            orderDate: formatExcelDate(row["下單日期"]) || new Date().toISOString().split('T')[0], 
-                            source:row["購買來源"]||"", contact:row["賣家名稱"]||"", contactLink:row["賣家連結"]||"", 
-                            paymentType:pType, transferDate: formatExcelDate(row["匯款日期"]), 
-                            transferAmount:Number(row["匯款金額"])||0, price:Number(row["單價"])||0, 
-                            secondPay:Number(row["二補"])||0, shipping:Number(row["國內運費"])||0, 
-                            link:row["下單連結"]||"", reconcileLink:row["對帳表連結"]||"", notes:row["備註"]||"", 
-                            imageSrc:"", group:null, 
-                            status:{ notArrived:true, pendingShip:!!row["待出貨日"], shipped:!!row["已出貨日"], pickedUp:!!row["取貨日"] }, 
-                            dates:{ pendingShip:formatExcelDate(row["待出貨日"]), shipped:formatExcelDate(row["已出貨日"]), pickedUp:formatExcelDate(row["取貨日"]) } 
+                            name: findKey(row, ["商品", "名稱", "Name"]) || "未命名", 
+                            category: findKey(row, ["分類", "Category"]) || "周邊", 
+                            orderDate: formatExcelDate(findKey(row, ["下單", "日期", "Date"])) || new Date().toISOString().split('T')[0], 
+                            source: findKey(row, ["來源", "Source"]) || "", 
+                            contact: findKey(row, ["賣家名稱", "賣家", "Contact"]) || "", 
+                            contactLink: findKey(row, ["賣家連結"]) || "", 
+                            paymentType: pType, 
+                            transferDate: formatExcelDate(findKey(row, ["匯款日期"])), 
+                            transferAmount: transferAmount, 
+                            price: price, 
+                            secondPay: secondPay, 
+                            shipping: shipping, 
+                            link: findKey(row, ["下單連結", "訂購連結"]) || "", 
+                            reconcileLink: findKey(row, ["對帳"]) || "", 
+                            notes: findKey(row, ["備註", "Note"]) || "", 
+                            imageSrc: "", 
+                            group: null, 
+                            status:{
+                                notArrived:true, 
+                                pendingShip:!!findKey(row, ["待出貨"]), 
+                                shipped:!!findKey(row, ["已出貨"]), 
+                                pickedUp:!!findKey(row, ["取貨"])
+                            }, 
+                            dates:{
+                                pendingShip:formatExcelDate(findKey(row, ["待出貨"])), 
+                                shipped:formatExcelDate(findKey(row, ["已出貨"])), 
+                                pickedUp:formatExcelDate(findKey(row, ["取貨"]))
+                            } 
                         }; 
                     }); 
-                    items=[...newItems,...items]; saveData(); populateMonthFilter(); renderList(); 
+                    
+                    items=[...newItems,...items]; 
+                    saveData(); 
+                    populateMonthFilter(); 
+                    renderList(); 
                     showToast(`🎉 成功匯入 ${newItems.length} 筆`); 
-                } catch(err) { showToast("❌ "+err.message, "error"); } finally { input.value=''; } 
+                } catch(err) {
+                    showToast("❌ "+err.message, "error");
+                } finally {
+                    input.value='';
+                } 
             }; 
             r.readAsArrayBuffer(f); 
-        };
+        }
 
+        // 安全性
         function togglePinSetting() {
             const isEnabled = document.getElementById('pinToggle').checked;
             const area = document.getElementById('pinChangeArea');
