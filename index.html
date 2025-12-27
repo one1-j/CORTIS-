@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CORTIS (V28 強制同步版)</title>
+    <title>CORTIS (V30 最終修正)</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
@@ -24,7 +24,7 @@
             padding-bottom: calc(var(--nav-height) + 120px); min-height: 100vh; 
         }
 
-        /* 提示訊息 (Toast) */
+        /* Toast 提示 */
         #toast-container { position: fixed; top: 30px; left: 50%; transform: translateX(-50%); z-index: 12000; display: flex; flex-direction: column; gap: 10px; width: auto; max-width: 90%; pointer-events: none; }
         .toast {
             pointer-events: auto; padding: 12px 24px; border-radius: 50px; background: #fff; color: #333;
@@ -90,7 +90,6 @@
         .filter-row { display: flex; gap: 10px; align-items: center; }
         .filter-select { flex: 1; padding: 0 10px; border: 1px solid #ccc; border-radius: 8px; background: #fff; font-weight: bold; font-size: 13px; color: var(--text-main); height: 44px; text-align: left; }
         
-        /* 狀態燈 */
         .sync-box { width: 44px; height: 44px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; color: #fff; flex-shrink: 0; transition: background 0.3s; }
         .sync-box.ok { background: #2ecc71; }
         .sync-box.loading { background: #f1c40f; color: #000; animation: pulse 1s infinite; }
@@ -194,7 +193,6 @@
         .nav-item.active { color: var(--text-main); }
         .nav-icon { font-size: 22px; display: block; margin-bottom: 3px; }
 
-        /* 批量操作列 */
         .bulk-actions-bar { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(150px); background: var(--text-main); color: #fff; padding: 10px 20px; display: none; gap: 10px; align-items: center; border-radius: 50px; box-shadow: 0 10px 20px rgba(0,0,0,0.3); transition: transform 0.3s; z-index: 10100; white-space: nowrap; overflow-x: auto; max-width: 90%; }
         .bulk-actions-bar.active { display: flex; transform: translateX(-50%) translateY(0); }
         .bulk-btn { background: #fff; color: #000; border: none; padding: 5px 12px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 12px; }
@@ -221,14 +219,12 @@
         </div>
     </div>
 
-    <!-- 編輯彈窗 -->
     <div id="editModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
                 <div class="modal-title">編輯紀錄</div>
                 <div class="close-modal" onclick="closeEditModal()">×</div>
             </div>
-            <!-- 編輯表單 -->
             <form id="editForm" onsubmit="handleEditSubmit(event)">
                 <input type="hidden" name="editId">
                 <div class="form-group"><label>商品名稱 <span style="color:red">*</span></label><input type="text" name="name" required></div>
@@ -249,7 +245,6 @@
         </div>
     </div>
 
-    <!-- 列表頁 -->
     <div id="view-home" class="view-section active">
         <div class="top-container">
             <div class="search-row">
@@ -285,7 +280,6 @@
         <div id="emptyState" style="text-align:center; padding:50px; color:#999; display:none;">目前沒有紀錄</div>
     </div>
 
-    <!-- 新增頁 -->
     <div id="view-add" class="view-section">
         <div class="form-container">
             <form id="addForm" onsubmit="handleAddSubmit(event)">
@@ -307,17 +301,14 @@
         </div>
     </div>
 
-    <!-- 管理頁 -->
     <div id="view-settings" class="view-section">
         <h2 class="page-title">管理</h2>
         <button class="settings-menu-btn" onclick="openSubPage('data')">📂 資料匯入 / 備份</button>
         <button class="settings-menu-btn" onclick="openSubPage('security')">🔒 安全性設定</button>
     </div>
 
-    <!-- 資料匯入/備份 子頁面 -->
     <div id="view-settings-data" class="view-section">
         <h2 class="page-title"><button class="back-btn" onclick="openSubPage('main')">←</button> 資料管理</h2>
-        
         <div class="section-header">Excel 整合</div>
         <div class="clean-btn-group">
             <button class="clean-btn" onclick="downloadTemplate()">📊 下載 Excel 範本 <span>›</span></button>
@@ -326,7 +317,6 @@
                 <input type="file" id="excelInput" onchange="importExcel(this)" accept=".xlsx, .xls, .csv" style="display:none;">
             </div>
         </div>
-
         <div class="section-header">系統備份</div>
         <div class="clean-btn-group">
             <button class="clean-btn" onclick="exportData()">⬇ 下載 JSON 備份 <span>›</span></button>
@@ -335,16 +325,12 @@
                 <input type="file" id="jsonInput" onchange="importData(this)" accept=".json" style="display:none;">
             </div>
         </div>
-
-        <div class="section-header">雲端與重置</div>
+        <div class="section-header">重置</div>
         <div class="clean-btn-group">
-            <button class="clean-btn" onclick="uploadToCloud()">⬆ 上傳至雲端 <span>›</span></button>
-            <button class="clean-btn" onclick="downloadFromCloud()">⬇ 從雲端還原 <span>›</span></button>
             <button class="clean-btn danger" onclick="clearAllData()">⚠ 清空所有資料</button>
         </div>
     </div>
 
-    <!-- 安全性 子頁面 -->
     <div id="view-settings-security" class="view-section">
         <h2 class="page-title"><button class="back-btn" onclick="openSubPage('main')">←</button> 安全性</h2>
         <div class="settings-card" style="background:#fff; padding:20px; border-radius:12px; border:1px solid #eee;">
@@ -359,7 +345,6 @@
         </div>
     </div>
 
-    <!-- 批量操作列 -->
     <div id="bulkActions" class="bulk-actions-bar">
         <div style="font-size:12px;">已選 <span id="selectedCount">0</span> 筆</div>
         <button class="bulk-btn select-all" onclick="selectAllVisible()">✅ 全選</button>
@@ -376,8 +361,8 @@
 
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbyeGblocTD-g8e3yUbG0YSMBRbT-6Uwfu2gF09Bjgqt32C_GIjBwnl-Ni2-cfDwXQfl4g/exec";
-        const STORAGE_KEY = 'cortis_v26_data';
-        const SETTINGS_KEY = 'cortis_v26_settings';
+        const STORAGE_KEY = 'cortis_v30_data';
+        const SETTINGS_KEY = 'cortis_v30_settings';
         
         let items = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
         let appSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { pinEnabled: false, pin: "0000" };
@@ -432,8 +417,6 @@
             syncWithCloud();
         }
 
-        // --- 強制綁定函式到 window ---
-        
         window.showImage = function(src) {
             if(!src) return;
             document.getElementById('fullImage').src = src;
@@ -596,6 +579,7 @@
             if(selectedIds.has(id)) selectedIds.delete(id); 
             else selectedIds.add(id); 
             renderList(); 
+            updateBulkBar(); 
         };
 
         window.toggleStatus = function(id, key) {
@@ -636,7 +620,7 @@
             if(confirm(`確定刪除選取的 ${selectedIds.size} 筆資料？`)) { 
                 items = items.filter(i => !selectedIds.has(String(i.id))); 
                 selectedIds.clear(); 
-                saveData(); renderList(); populateMonthFilter(); 
+                saveData(); renderList(); populateMonthFilter(); updateBulkBar();
             } 
         };
 
@@ -645,7 +629,7 @@
             if(name) { 
                 items.forEach(i => { if(selectedIds.has(String(i.id))) i.group = name; }); 
                 selectedIds.clear(); 
-                saveData(); renderList(); 
+                saveData(); renderList(); updateBulkBar();
             } 
         };
 
@@ -660,10 +644,10 @@
                 return matchK && matchM && matchC;
             });
             filtered.forEach(i => selectedIds.add(String(i.id)));
-            renderList();
+            renderList(); updateBulkBar();
         };
 
-        window.clearSelection = function() { selectedIds.clear(); renderList(); };
+        window.clearSelection = function() { selectedIds.clear(); renderList(); updateBulkBar(); };
         window.ungroupItem = function(id) { if(confirm("移除併單？")) { const i = items.find(x => String(x.id) === String(id)); if(i) { i.group = null; saveData(); renderList(); } } };
 
         function updateSyncStatus(status) {
@@ -678,12 +662,10 @@
         function saveData() {
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); updateSummary();
-                // 雲端同步 (如果失敗不提示，僅本地存檔)
                 fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(items) });
             } catch (e) { showToast("儲存空間不足", "error"); }
         }
 
-        // --- 介面邏輯 ---
         window.switchView = function(view, el) {
             Object.values(views).forEach(v => v.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -739,7 +721,7 @@
                 let groupHtml = item.group ? `<span class="group-tag">📦 ${item.group} <span class="remove-group" onclick="ungroupItem('${item.id}')">×</span></span>` : '';
                 
                 const isSelected = selectedIds.has(String(item.id)) ? 'selected' : '';
-                const checkMark = selectedIds.has(String(item.id)) ? '' : ''; // 無勾勾
+                const checkMark = selectedIds.has(String(item.id)) ? '' : ''; 
                 const openUrl = (url) => url ? `window.open('${url}','_blank')` : '';
                 const btnStyle = (url) => url ? '' : 'color:#ccc; cursor:default;';
 
@@ -830,29 +812,33 @@
             window.scrollTo(0,0);
         };
 
-        window.uploadToCloud = function() { 
-            showToast("正在上傳...", "loading");
+        window.uploadToCloud = function(silent = false) { 
+            if(!silent) showToast("正在上傳...", "loading");
+            updateSyncStatus('loading');
             fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(items) })
-            .then(()=>{ showToast("✅ 上傳成功！"); updateSyncStatus('ok'); })
-            .catch(()=>{ showToast("❌ 上傳失敗", "error"); updateSyncStatus('error'); }); 
+            .then(()=>{ if(!silent) showToast("✅ 上傳成功！"); updateSyncStatus('ok'); })
+            .catch(()=>{ if(!silent) showToast("❌ 上傳失敗", "error"); updateSyncStatus('error'); }); 
         };
 
-        window.downloadFromCloud = function() {
-            showToast("正在下載...", "loading");
+        window.downloadFromCloud = function(silent = false) {
+            if(!silent) showToast("正在下載...", "loading");
+            updateSyncStatus('loading');
             fetch(API_URL)
             .then(res => res.json())
             .then(cloudData => {
-                if(Array.isArray(cloudData) && cloudData.length > 0) {
-                    items = cloudData;
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-                    renderList(); populateMonthFilter();
-                    showToast("✅ 資料已還原！");
-                    updateSyncStatus('ok');
+                if(Array.isArray(cloudData)) {
+                    if(cloudData.length > 0 || !silent) {
+                        items = cloudData;
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+                        renderList(); populateMonthFilter();
+                        if(!silent) showToast("✅ 資料已還原！");
+                        updateSyncStatus('ok');
+                    }
                 } else {
-                    showToast("❌ 雲端無資料", "error");
+                    if(!silent) showToast("❌ 雲端無資料", "error");
                 }
             })
-            .catch(e => { showToast("❌ 下載失敗", "error"); updateSyncStatus('error'); });
+            .catch(e => { if(!silent) showToast("❌ 下載失敗", "error"); updateSyncStatus('error'); });
         };
         
         async function syncWithCloud() {
@@ -867,11 +853,27 @@
             } catch(e) { updateSyncStatus('error'); } finally { isSyncing = false; }
         }
 
-        // Excel 功能
+        // Excel 智慧邏輯 (V30移植)
+        function formatExcelDate(dateVal) {
+            if (!dateVal) return "";
+            if (dateVal instanceof Date) {
+                const y = dateVal.getFullYear();
+                const m = String(dateVal.getMonth() + 1).padStart(2, '0');
+                const d = String(dateVal.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            }
+            if (typeof dateVal === 'string') return dateVal.replace(/\//g, '-').split('-').map(p => p.padStart(2, '0')).join('-');
+            if (typeof dateVal === 'number') {
+                const d = new Date(Math.round((dateVal - 25569)*86400*1000));
+                return d.toISOString().split('T')[0];
+            }
+            return "";
+        }
+
         window.downloadTemplate = function() { 
             if(typeof XLSX==='undefined'){showToast('網路錯誤: Excel工具未載入', 'error');return;} 
             const data=[{"商品名稱":"範例","分類":"周邊","下單日期":"2025-01-01","購買來源":"官網","賣家名稱":"@abc","賣家連結":"","付款方式 (待付款/貨到付款/銀行匯款)":"銀行匯款","匯款日期":"2025-01-01","匯款金額":500,"單價":500,"二補":0,"國內運費":60,"待出貨日":"","已出貨日":"","取貨日":"","下單連結":"","對帳表連結":"","備註":""}]; 
-            XLSX.writeFile(XLSX.utils.book_new(XLSX.utils.book_append_sheet(XLSX.utils.book_new(), XLSX.utils.json_to_sheet(data), "Sheet1")), "CORTIS_V24範本.xlsx"); 
+            XLSX.writeFile(XLSX.utils.book_new(XLSX.utils.book_append_sheet(XLSX.utils.book_new(), XLSX.utils.json_to_sheet(data), "Sheet1")), "CORTIS_V30範本.xlsx"); 
         };
 
         window.exportData = function() { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(items,null,2)],{type:'application/json'})); a.download = `backup_${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); };
@@ -888,10 +890,38 @@
         window.importExcel = function(input) { 
             if(typeof XLSX==='undefined'){showToast('網路錯誤', 'error');input.value='';return;} 
             const f=input.files[0]; if(!f)return; 
-            const r=new FileReader(); r.onload=e=>{ try{ const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'}); const json=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]); if(json.length===0)throw new Error("無資料"); const newItems=json.map(row=>{ let pType="Pending"; const pRaw=row["付款方式 (待付款/貨到付款/銀行匯款)"]||""; if(pRaw.includes("貨到"))pType="COD"; else if(pRaw.includes("匯款"))pType="Transfer"; return { id:String(Date.now()+Math.floor(Math.random()*100000)), name:row["商品名稱"]||"未命名", category:row["分類"]||"周邊", orderDate:row["下單日期"]||new Date().toISOString().split('T')[0], source:row["購買來源"]||"", contact:row["賣家名稱"]||"", contactLink:row["賣家連結"]||"", paymentType:pType, transferDate:row["匯款日期"]||"", transferAmount:Number(row["匯款金額"])||0, price:Number(row["單價"])||0, secondPay:Number(row["二補"])||0, shipping:Number(row["國內運費"])||0, link:row["下單連結"]||"", reconcileLink:row["對帳表連結"]||"", notes:row["備註"]||"", imageSrc:"", group:null, status:{notArrived:true, pendingShip:!!row["待出貨日"], shipped:!!row["已出貨日"], pickedUp:!!row["取貨日"]}, dates:{pendingShip:row["待出貨日"]||'', shipped:row["已出貨日"]||'', pickedUp:row["取貨日"]||''} }; }); items=[...newItems,...items]; saveData(); populateMonthFilter(); renderList(); showToast(`🎉 成功匯入 ${newItems.length} 筆`); }catch(err){showToast("❌ "+err.message, "error");} finally{input.value='';} }; r.readAsArrayBuffer(f); 
-        }
+            const r=new FileReader(); 
+            r.onload=e=>{ 
+                try { 
+                    const wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array', cellDates: true, dateNF: 'yyyy-mm-dd'}); 
+                    const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]); 
+                    if(json.length===0)throw new Error("無資料"); 
+                    const newItems = json.map(row => { 
+                        let pType="Pending"; 
+                        const pRaw = String(row["付款方式 (待付款/貨到付款/銀行匯款)"]||"");
+                        if(pRaw.match(/貨|取付|COD/)) pType="COD"; 
+                        else if(pRaw.match(/匯|轉|銀行|ATM|Transfer/)) pType="Transfer"; 
+                        return { 
+                            id:String(Date.now()+Math.floor(Math.random()*100000)), 
+                            name:row["商品名稱"]||"未命名", category:row["分類"]||"周邊", 
+                            orderDate: formatExcelDate(row["下單日期"]) || new Date().toISOString().split('T')[0], 
+                            source:row["購買來源"]||"", contact:row["賣家名稱"]||"", contactLink:row["賣家連結"]||"", 
+                            paymentType:pType, transferDate: formatExcelDate(row["匯款日期"]), 
+                            transferAmount:Number(row["匯款金額"])||0, price:Number(row["單價"])||0, 
+                            secondPay:Number(row["二補"])||0, shipping:Number(row["國內運費"])||0, 
+                            link:row["下單連結"]||"", reconcileLink:row["對帳表連結"]||"", notes:row["備註"]||"", 
+                            imageSrc:"", group:null, 
+                            status:{ notArrived:true, pendingShip:!!row["待出貨日"], shipped:!!row["已出貨日"], pickedUp:!!row["取貨日"] }, 
+                            dates:{ pendingShip:formatExcelDate(row["待出貨日"]), shipped:formatExcelDate(row["已出貨日"]), pickedUp:formatExcelDate(row["取貨日"]) } 
+                        }; 
+                    }); 
+                    items=[...newItems,...items]; saveData(); populateMonthFilter(); renderList(); 
+                    showToast(`🎉 成功匯入 ${newItems.length} 筆`); 
+                } catch(err) { showToast("❌ "+err.message, "error"); } finally { input.value=''; } 
+            }; 
+            r.readAsArrayBuffer(f); 
+        };
 
-        // 安全性
         function togglePinSetting() {
             const isEnabled = document.getElementById('pinToggle').checked;
             const area = document.getElementById('pinChangeArea');
