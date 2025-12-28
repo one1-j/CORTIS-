@@ -3,16 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CORTIS (V32 穩定修復)</title>
+    <title>CORTIS (V33 修復版)</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
         :root {
-            --bg-color: #F0ECE6; --card-bg: #FFFFFF; 
+            --bg-color: #F0ECE6; /* 米黃色 */
+            --card-bg: #FFFFFF; 
             --text-main: #262626; --text-sub: #666666;
-            --border: 1px solid #E0E0E0; --accent: #d63031; 
-            --nav-height: 70px; --select-color: #27ae60; --radius: 12px;
+            --border: 1px solid #E0E0E0;
+            --accent: #d63031; 
+            --nav-height: 70px; --select-color: #27ae60;
+            --radius: 12px;
         }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { 
@@ -22,7 +25,7 @@
         }
 
         /* Toast 提示 */
-        #toast-container { position: fixed; top: 30px; left: 50%; transform: translateX(-50%); z-index: 20000; display: flex; flex-direction: column; gap: 10px; width: auto; max-width: 90%; pointer-events: none; }
+        #toast-container { position: fixed; top: 30px; left: 50%; transform: translateX(-50%); z-index: 12000; display: flex; flex-direction: column; gap: 10px; width: auto; max-width: 90%; pointer-events: none; }
         .toast {
             pointer-events: auto; padding: 12px 24px; border-radius: 50px; background: #fff; color: #333;
             box-shadow: 0 10px 40px rgba(0,0,0,0.15); font-weight: bold; font-size: 14px;
@@ -38,7 +41,7 @@
         /* 圖片檢視器 */
         #imageViewer {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95); z-index: 15000;
+            background: rgba(0,0,0,0.95); z-index: 11000;
             display: none; justify-content: center; align-items: center;
         }
         #imageViewer img { max-width: 95%; max-height: 80%; border-radius: 8px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
@@ -53,7 +56,7 @@
         /* 編輯彈窗 */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); z-index: 11000;
+            background: rgba(0,0,0,0.5); z-index: 10500;
             display: none; justify-content: center; align-items: end;
             backdrop-filter: blur(2px);
         }
@@ -70,13 +73,13 @@
         .close-modal { font-size: 28px; cursor: pointer; color: #999; padding: 5px; line-height: 1; }
 
         /* 鎖定畫面 */
-        #lockScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 21000; display: none; flex-direction: column; justify-content: center; align-items: center; }
+        #lockScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 9999; display: none; flex-direction: column; justify-content: center; align-items: center; }
         .pin-container { text-align: center; } .pin-title { font-size: 2rem; font-weight: 900; margin-bottom: 20px; }
         .pin-input { padding: 15px; font-size: 24px; text-align: center; letter-spacing: 10px; border: 2px solid var(--text-main); border-radius: 8px; width: 200px; background: #fff; outline: none; font-family: monospace; }
 
         /* 頂部工具 */
         .top-container {
-            background: var(--bg-color); position: sticky; top: 0; z-index: 5000;
+            background: var(--bg-color); position: sticky; top: 0; z-index: 40;
             border-bottom: 1px solid rgba(0,0,0,0.05); padding: 15px; margin-bottom: 5px;
         }
         .search-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
@@ -186,7 +189,7 @@
         input:checked + .slider { background-color: var(--text-main); }
         input:checked + .slider:before { transform: translateX(24px); }
 
-        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: var(--nav-height); background: #fff; border-top: 1px solid #eee; display: flex; justify-content: space-around; align-items: center; z-index: 10000; padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -2px 10px rgba(0,0,0,0.03); }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: var(--nav-height); background: #fff; border-top: 1px solid #eee; display: flex; justify-content: space-around; align-items: center; z-index: 100; padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -2px 10px rgba(0,0,0,0.03); }
         .nav-item { flex: 1; text-align: center; color: #aaa; font-size: 10px; font-weight: 600; cursor: pointer; padding-top: 10px; transition: color 0.2s; }
         .nav-item.active { color: var(--text-main); }
         .nav-icon { font-size: 22px; display: block; margin-bottom: 3px; }
@@ -371,8 +374,8 @@
 
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbyeGblocTD-g8e3yUbG0YSMBRbT-6Uwfu2gF09Bjgqt32C_GIjBwnl-Ni2-cfDwXQfl4g/exec";
-        const STORAGE_KEY = 'cortis_v31_data';
-        const SETTINGS_KEY = 'cortis_v31_settings';
+        const STORAGE_KEY = 'cortis_v33_data';
+        const SETTINGS_KEY = 'cortis_v33_settings';
         
         let items = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
         let appSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { pinEnabled: false, pin: "0000" };
@@ -421,30 +424,34 @@
         }
 
         function initApp() {
+            // 資料自動修復機制：確保 items 是陣列
+            if(!Array.isArray(items)) { items = []; }
             renderList(); populateMonthFilter();
             document.querySelector('#addForm [name="orderDate"]').valueAsDate = new Date();
             updateSyncStatus('ready');
             syncWithCloud();
         }
 
-        function showImage(src) {
+        // --- 強制綁定函式 ---
+        window.showImage = function(src) {
             if(!src) return;
             document.getElementById('fullImage').src = src;
             document.getElementById('imageViewer').style.display = 'flex';
-        }
+        };
 
-        function toggleSort() { sortDesc = !sortDesc; renderList(); }
-        function clearAddImage() { document.querySelector('#addForm [name="imageInput"]').value = ''; }
-        function clearEditImage() { document.querySelector('#editForm [name="imageInput"]').value = ''; editImageTemp = ''; }
+        window.toggleSort = function() { sortDesc = !sortDesc; renderList(); };
+        window.clearAddImage = function() { document.querySelector('#addForm [name="imageInput"]').value = ''; };
+        window.clearEditImage = function() { document.querySelector('#editForm [name="imageInput"]').value = ''; editImageTemp = ''; };
         
-        function toggleTransferFields(select) { 
+        window.toggleTransferFields = function(select) { 
             const form = select.closest('form');
             const div = form.querySelector('.transferFields');
             if (select.value === 'Transfer') div.classList.remove('hidden'); 
             else div.classList.add('hidden'); 
-        }
+        };
 
-        async function handleAddSubmit(e) {
+        // --- 新增邏輯 ---
+        window.handleAddSubmit = async function(e) {
             e.preventDefault();
             const form = e.target;
             const btn = form.querySelector('button[type="submit"]');
@@ -463,7 +470,8 @@
                 const imgInput = form.querySelector('[name="imageInput"]');
                 let imgData = "";
                 if(imgInput.files && imgInput.files[0]) {
-                    imgData = await compressImage(imgInput.files[0]);
+                    try { imgData = await compressImage(imgInput.files[0]); }
+                    catch(err) { console.warn("圖片壓縮失敗"); }
                 }
 
                 const newItem = {
@@ -499,13 +507,15 @@
                 showToast("新增成功！");
                 
             } catch (error) { 
+                console.error(error);
                 showToast("錯誤: " + error.message, "error"); 
             } finally { 
                 btn.innerText = "儲存"; btn.disabled = false; 
             }
-        }
+        };
 
-        async function handleEditSubmit(e) {
+        // --- 編輯邏輯 ---
+        window.handleEditSubmit = async function(e) {
             e.preventDefault();
             const form = e.target;
             const id = form.querySelector('[name="editId"]').value;
@@ -517,7 +527,8 @@
             let imgData = editImageTemp; 
             
             if(imgInput.files && imgInput.files[0]) {
-                imgData = await compressImage(imgInput.files[0]);
+                try { imgData = await compressImage(imgInput.files[0]); }
+                catch(err) { console.warn("圖片壓縮失敗"); }
             } else if (imgInput.value === '' && !editImageTemp) {
                 imgData = ''; 
             }
@@ -546,9 +557,9 @@
             closeEditModal();
             renderList();
             showToast("修改成功！");
-        }
+        };
 
-        function openEditModal(id) {
+        window.openEditModal = function(id) {
             const item = items.find(i => String(i.id) === String(id));
             if (!item) return;
             
@@ -577,22 +588,22 @@
             else transferDiv.classList.add('hidden');
             
             document.getElementById('editModal').classList.add('active');
-        }
+        };
 
-        function closeEditModal() {
+        window.closeEditModal = function() {
             document.getElementById('editModal').classList.remove('active');
             editImageTemp = null;
-        }
+        };
 
-        function toggleSelection(id) { 
+        window.toggleSelection = function(id) { 
             id = String(id);
             if(selectedIds.has(id)) selectedIds.delete(id); 
             else selectedIds.add(id); 
             renderList(); 
             updateBulkBar(); 
-        }
+        };
 
-        function toggleStatus(id, key) {
+        window.toggleStatus = function(id, key) {
             const item = items.find(i => String(i.id) === String(id));
             if(item) {
                 const newStatus = !item.status[key];
@@ -606,9 +617,9 @@
                 }
                 saveData(); renderList();
             }
-        }
+        };
 
-        function updateStatusDate(id, key, dateValue) {
+        window.updateStatusDate = function(id, key, dateValue) {
             const item = items.find(i => String(i.id) === String(id));
             if(item) {
                 if(!item.dates) item.dates = {};
@@ -616,49 +627,51 @@
                 if(dateValue && !item.status[key]) item.status[key] = true;
                 saveData();
             }
-        }
+        };
 
-        function deleteItem(id) { 
+        window.deleteItem = function(id) { 
             if(confirm('確定要刪除這筆紀錄嗎？')) { 
                 items = items.filter(i => String(i.id) !== String(id)); 
                 if(selectedIds.has(String(id))) selectedIds.delete(String(id)); 
                 saveData(); renderList(); populateMonthFilter(); 
             } 
-        }
+        };
 
-        function deleteSelectedItems() { 
+        window.deleteSelectedItems = function() { 
             if(confirm(`確定刪除選取的 ${selectedIds.size} 筆資料？`)) { 
                 items = items.filter(i => !selectedIds.has(String(i.id))); 
                 selectedIds.clear(); 
                 saveData(); renderList(); populateMonthFilter(); updateBulkBar();
             } 
-        }
+        };
 
-        function mergeSelectedItems() { 
+        window.mergeSelectedItems = function() { 
             const name = prompt("輸入併單名稱:"); 
             if(name) { 
                 items.forEach(i => { if(selectedIds.has(String(i.id))) i.group = name; }); 
                 selectedIds.clear(); 
                 saveData(); renderList(); updateBulkBar();
             } 
-        }
+        };
 
-        function selectAllVisible() {
+        window.selectAllVisible = function() {
             const keyword = document.getElementById('searchInput').value.toLowerCase();
             const monthVal = document.getElementById('monthFilter').value;
             const catVal = document.getElementById('categoryFilter').value;
+            
             const filtered = items.filter(i => {
                 const matchK = (i.name||'').toLowerCase().includes(keyword);
                 const matchM = monthVal === 'all' || i.orderDate.startsWith(monthVal);
                 const matchC = catVal === 'all' || i.category === catVal;
                 return matchK && matchM && matchC;
             });
+            
             filtered.forEach(i => selectedIds.add(String(i.id)));
             renderList(); updateBulkBar();
-        }
+        };
 
-        function clearSelection() { selectedIds.clear(); renderList(); updateBulkBar(); }
-        function ungroupItem(id) { if(confirm("移除併單？")) { const i = items.find(x => String(x.id) === String(id)); if(i) { i.group = null; saveData(); renderList(); } } }
+        window.clearSelection = function() { selectedIds.clear(); renderList(); updateBulkBar(); };
+        window.ungroupItem = function(id) { if(confirm("移除併單？")) { const i = items.find(x => String(x.id) === String(id)); if(i) { i.group = null; saveData(); renderList(); } } };
 
         function updateSyncStatus(status) {
             const box = document.getElementById('syncWrapper');
@@ -672,19 +685,20 @@
         function saveData() {
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); updateSummary();
-                fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(items) });
+                // 自動上傳
+                uploadToCloud(true);
             } catch (e) { showToast("儲存空間不足", "error"); }
         }
 
-        function uploadToCloud(silent = false) { 
+        window.uploadToCloud = function(silent = false) { 
             if(!silent) showToast("正在上傳...", "loading");
             updateSyncStatus('loading');
             fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(items) })
             .then(()=>{ if(!silent) showToast("✅ 上傳成功！"); updateSyncStatus('ok'); })
             .catch(()=>{ if(!silent) showToast("❌ 上傳失敗", "error"); updateSyncStatus('error'); }); 
-        }
+        };
 
-        function downloadFromCloud(silent = false) {
+        window.downloadFromCloud = function(silent = false) {
             if(!silent) showToast("正在下載...", "loading");
             updateSyncStatus('loading');
             fetch(API_URL)
@@ -703,7 +717,7 @@
                 }
             })
             .catch(e => { if(!silent) showToast("❌ 下載失敗", "error"); updateSyncStatus('error'); });
-        }
+        };
         
         async function syncWithCloud() {
             if(isSyncing) return; isSyncing = true; updateSyncStatus('loading');
@@ -717,6 +731,7 @@
             } catch(e) { updateSyncStatus('error'); } finally { isSyncing = false; }
         }
 
+        // Excel 智慧邏輯 (V31)
         function findKey(row, keywords) {
             const keys = Object.keys(row);
             for (let k of keys) {
@@ -743,27 +758,28 @@
             return "";
         }
 
-        function downloadTemplate() { 
+        window.downloadTemplate = function() { 
             if(typeof XLSX==='undefined'){showToast('網路錯誤: Excel工具未載入', 'error');return;} 
             const data=[{"商品名稱":"範例","分類":"周邊","下單日期":"2025-01-01","購買來源":"官網","賣家名稱":"@abc","賣家連結":"","付款方式":"銀行匯款","匯款日期":"2025-01-01","匯款金額":500,"單價":500,"二補":0,"國內運費":60,"待出貨日":"","已出貨日":"","取貨日":"","下單連結":"","對帳表連結":"","備註":""}]; 
-            XLSX.writeFile(XLSX.utils.book_new(XLSX.utils.book_append_sheet(XLSX.utils.book_new(), XLSX.utils.json_to_sheet(data), "Sheet1")), "CORTIS_V31範本.xlsx"); 
-        }
+            XLSX.writeFile(XLSX.utils.book_new(XLSX.utils.book_append_sheet(XLSX.utils.book_new(), XLSX.utils.json_to_sheet(data), "Sheet1")), "CORTIS_V33範本.xlsx"); 
+        };
 
-        function exportData() { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(items,null,2)],{type:'application/json'})); a.download = `backup_${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
+        window.exportData = function() { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(items,null,2)],{type:'application/json'})); a.download = `backup_${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); };
         
-        function importData(input) { 
+        window.importData = function(input) { 
             const f = input.files[0]; if(!f) return; 
             const r = new FileReader(); 
             r.onload=e=>{ try{ items=JSON.parse(e.target.result); saveData(); populateMonthFilter(); renderList(); showToast("✅ JSON 匯入成功！"); }catch{ showToast("❌ 格式錯誤", "error"); } }; 
             r.readAsText(f); 
-        }
+        };
         
-        function clearAllData() { if(confirm('清空？')) { items=[]; saveData(); populateMonthFilter(); renderList(); } }
+        window.clearAllData = function() { if(confirm('清空？')) { items=[]; saveData(); populateMonthFilter(); renderList(); } };
 
-        function importExcel(input) { 
+        window.importExcel = function(input) { 
             if(typeof XLSX==='undefined'){showToast('網路錯誤', 'error');input.value='';return;} 
             const f=input.files[0]; if(!f)return; 
             const r=new FileReader(); 
+            
             r.onload=e=>{ 
                 try { 
                     const wb = XLSX.read(new Uint8Array(e.target.result), {
@@ -818,12 +834,22 @@
                             } 
                         }; 
                     }); 
-                    items=[...newItems,...items]; saveData(); populateMonthFilter(); renderList(); showToast(`🎉 成功匯入 ${newItems.length} 筆`); 
-                } catch(err) { showToast("❌ "+err.message, "error"); } finally { input.value=''; } 
+                    
+                    items=[...newItems,...items]; 
+                    saveData(); 
+                    populateMonthFilter(); 
+                    renderList(); 
+                    showToast(`🎉 成功匯入 ${newItems.length} 筆`); 
+                } catch(err) {
+                    showToast("❌ "+err.message, "error");
+                } finally {
+                    input.value='';
+                } 
             }; 
             r.readAsArrayBuffer(f); 
         }
 
+        // 安全性
         function togglePinSetting() {
             const isEnabled = document.getElementById('pinToggle').checked;
             const area = document.getElementById('pinChangeArea');
@@ -860,7 +886,8 @@
             });
         }
 
-        function switchView(view, el) {
+        // --- 介面邏輯 ---
+        window.switchView = function(view, el) {
             Object.values(views).forEach(v => v.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             views[view].classList.add('active'); 
@@ -869,15 +896,122 @@
             if(view === 'home') { renderList(); updateBulkBar(); }
             else { document.getElementById('bulkActions').classList.remove('active'); }
             window.scrollTo(0,0);
+        };
+
+        window.renderList = function() {
+            const grid = document.getElementById('merchGrid'); grid.innerHTML = '';
+            const keyword = document.getElementById('searchInput').value.toLowerCase();
+            const monthVal = document.getElementById('monthFilter').value;
+            const catVal = document.getElementById('categoryFilter').value;
+
+            let filtered = items.filter(i => {
+                const matchK = (i.name||'').toLowerCase().includes(keyword);
+                const matchM = monthVal === 'all' || i.orderDate.startsWith(monthVal);
+                const matchC = catVal === 'all' || i.category === catVal;
+                return matchK && matchM && matchC;
+            });
+
+            filtered.sort((a,b) => sortDesc ? new Date(b.orderDate)-new Date(a.orderDate) : new Date(a.orderDate)-new Date(b.orderDate));
+            document.getElementById('emptyState').style.display = filtered.length ? 'none' : 'block';
+            updateSummary(filtered);
+
+            filtered.forEach(item => {
+                const total = (item.price||0) + (item.secondPay||0) + (item.shipping||0);
+                
+                let checksHtml = '';
+                STATUS_KEYS.forEach(k => {
+                    const checked = item.status[k] ? 'checked' : '';
+                    const dateVal = (item.dates && item.dates[k]) ? item.dates[k] : '';
+                    let dateInputHtml = '';
+                    if (['pendingShip', 'shipped', 'pickedUp'].includes(k)) {
+                        const style = checked ? '' : 'visibility:hidden; height:0;';
+                        dateInputHtml = `<input type="date" class="mini-date" value="${dateVal}" style="${style}" onchange="updateStatusDate('${item.id}', '${k}', this.value)" onclick="event.stopPropagation()">`;
+                    }
+                    checksHtml += `
+                        <div class="check-group ${checked}">
+                            <div class="check-left" onclick="toggleStatus('${item.id}', '${k}')">
+                                <div class="check-box"></div>
+                                <span class="check-label">${STATUS_LABELS[k]}</span>
+                            </div>
+                            ${dateInputHtml}
+                        </div>`;
+                });
+
+                let contactDisplay = item.contact || '-';
+                if(item.contactLink) contactDisplay = `<a class="contact-link" onclick="window.open('${item.contactLink}', '_blank')">${item.contact || '連結'}</a>`;
+                let groupHtml = item.group ? `<span class="group-tag">📦 ${item.group} <span class="remove-group" onclick="ungroupItem('${item.id}')">×</span></span>` : '';
+                
+                const isSelected = selectedIds.has(String(item.id)) ? 'selected' : '';
+                const checkMark = selectedIds.has(String(item.id)) ? '' : ''; 
+                const openUrl = (url) => url ? `window.open('${url}','_blank')` : '';
+                const btnStyle = (url) => url ? '' : 'color:#ccc; cursor:default;';
+
+                const noteBtnText = item.notes ? "查看備註" : "無備註";
+                const noteBtnColor = item.notes ? "#333" : "#999";
+                const noteContent = item.notes || "無內容";
+                
+                let payText = PAYMENT_LABELS[item.paymentType] || item.paymentType;
+                if(item.paymentType === 'Transfer' && item.transferDate) {
+                    payText += ` (${item.transferDate})`;
+                }
+
+                const card = document.createElement('div');
+                card.className = `merch-card ${isSelected}`;
+                const imgClick = item.imageSrc ? `onclick="showImage('${item.imageSrc}'); event.stopPropagation();"` : '';
+                const imgHtml = item.imageSrc ? `<img src="${item.imageSrc}" class="card-thumb" ${imgClick}>` : `<div class="card-thumb"></div>`;
+
+                card.innerHTML = `
+                    <div class="card-select-overlay" onclick="toggleSelection('${item.id}'); event.stopPropagation();"><div class="custom-checkbox">${checkMark}</div></div>
+                    <div class="card-status-bar">${STATUS_KEYS.map(k => `<div class="status-segment ${item.status[k]?'active':''}"></div>`).join('')}</div>
+                    <div class="card-header">${imgHtml}
+                        <div class="card-title-group"><div>${groupHtml}<span class="category-tag">${item.category||'周邊'}</span></div><div class="card-title">${item.name}</div><div class="card-subtitle">${item.orderDate} · ${item.source||''}</div></div>
+                    </div>
+                    <div class="info-grid">
+                        <span class="label">付款方式</span><span class="value" style="font-size:13px;">${payText}</span>
+                        <span class="label">單價</span><span class="value">${item.price||0}</span>
+                        <span class="label">二補</span><span class="value">${item.secondPay||0}</span>
+                        <span class="label">國內運費</span><span class="value">${item.shipping||0}</span>
+                        <span class="label" style="font-weight:900; color:#000;">總計</span><span class="value highlight">NT$ ${total}</span>
+                    </div>
+                    
+                    <button class="note-toggle-btn" style="color:${noteBtnColor}" onclick="toggleNote(this)">${noteBtnText}</button>
+                    <div class="note-content">${noteContent}</div>
+                    
+                    <div class="checklist-col">${checksHtml}</div>
+                    
+                    <div class="seller-info"><span>賣家資訊</span><span>${contactDisplay}</span></div>
+
+                    <div class="card-actions">
+                        <button class="action-btn" onclick="openEditModal('${item.id}')">編輯</button>
+                        <button class="action-btn" onclick="${openUrl(item.link)}" style="${btnStyle(item.link)}">下單連結</button>
+                        <button class="action-btn" onclick="${openUrl(item.reconcileLink)}" style="${btnStyle(item.reconcileLink)}">對帳表</button>
+                        <button class="action-btn text-red" onclick="deleteItem('${item.id}')">刪除</button>
+                    </div>`;
+                grid.appendChild(card);
+            });
+            updateBulkBar();
+        };
+
+        function updateBulkBar() { 
+            const bar = document.getElementById('bulkActions'); 
+            const isHome = document.getElementById('view-home').classList.contains('active');
+            if(selectedIds.size > 0 && isHome) { 
+                bar.classList.add('active'); 
+                document.getElementById('selectedCount').innerText = selectedIds.size; 
+            } else { bar.classList.remove('active'); } 
         }
 
-        function openSubPage(page) {
-            Object.values(views).forEach(v => v.classList.remove('active'));
-            if(page === 'main') views.settings.classList.add('active');
-            else if(page === 'data') views.settingsData.classList.add('active');
-            else if(page === 'security') views.settingsSecurity.classList.add('active');
-            document.getElementById('bulkActions').classList.remove('active');
-            window.scrollTo(0,0);
+        window.toggleNote = function(btn) {
+            const content = btn.nextElementSibling;
+            if(content.innerText === "無內容") return;
+            content.classList.toggle('show');
+            btn.innerHTML = content.classList.contains('show') ? "隱藏備註" : "查看備註";
+        };
+
+        function updateSummary(filteredItems = items) {
+            const total = filteredItems.reduce((acc, i) => acc + (i.price||0) + (i.secondPay||0) + (i.shipping||0), 0);
+            document.getElementById('summaryTotal').innerText = `NT$ ${total.toLocaleString()}`;
+            document.getElementById('summaryCount').innerText = filteredItems.length;
         }
 
         function populateMonthFilter() {
@@ -890,11 +1024,14 @@
             if(months.includes(currentVal)) select.value = currentVal; else select.value = "all";
         }
 
-        function updateSummary(filteredItems = items) {
-            const total = filteredItems.reduce((acc, i) => acc + (i.price||0) + (i.secondPay||0) + (i.shipping||0), 0);
-            document.getElementById('summaryTotal').innerText = `NT$ ${total.toLocaleString()}`;
-            document.getElementById('summaryCount').innerText = filteredItems.length;
-        }
+        window.openSubPage = function(page) {
+            Object.values(views).forEach(v => v.classList.remove('active'));
+            if(page === 'main') views.settings.classList.add('active');
+            else if(page === 'data') views.settingsData.classList.add('active');
+            else if(page === 'security') views.settingsSecurity.classList.add('active');
+            document.getElementById('bulkActions').classList.remove('active');
+            window.scrollTo(0,0);
+        };
     </script>
 </body>
 </html>
