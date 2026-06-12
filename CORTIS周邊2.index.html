@@ -1,692 +1,1037 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icon.png">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CORTIS 周邊紀錄表</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CORTIS (V33 修復版)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
     <style>
-        /* --- CORTIS THEME --- */
         :root {
-            --bg-color: #F0ECE6;   /* 米杏色 */
-            --text-color: #262626; /* 炭黑色 */
-            --white: #FFFFFF;
-            --border: 2px solid var(--text-color);
-            --font-main: 'Inter', 'Noto Sans TC', sans-serif;
-            --accent-color: #d63031; /* 警示紅 */
+            --bg-color: #F0ECE6; /* 米黃色 */
+            --card-bg: #FFFFFF; 
+            --text-main: #262626; --text-sub: #666666;
+            --border: 1px solid #E0E0E0;
+            --accent: #d63031; 
+            --nav-height: 70px; --select-color: #27ae60;
+            --radius: 12px;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { 
+            background-color: var(--bg-color); color: var(--text-main); 
+            font-family: 'Noto Sans TC', 'Inter', sans-serif; margin: 0; padding: 0; 
+            padding-bottom: calc(var(--nav-height) + 120px); min-height: 100vh; 
         }
 
-        * { box-sizing: border-box; }
+        /* Toast 提示 */
+        #toast-container { position: fixed; top: 30px; left: 50%; transform: translateX(-50%); z-index: 12000; display: flex; flex-direction: column; gap: 10px; width: auto; max-width: 90%; pointer-events: none; }
+        .toast {
+            pointer-events: auto; padding: 12px 24px; border-radius: 50px; background: #fff; color: #333;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15); font-weight: bold; font-size: 14px;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            animation: slideDown 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            border: 1px solid rgba(0,0,0,0.05); white-space: nowrap;
+        }
+        .toast i { font-style: normal; font-size: 16px; }
+        .toast.success i { color: #27ae60; }
+        .toast.error i { color: #d63031; }
+        @keyframes slideDown { from { transform: translate(-50%, -30px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
 
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            font-family: var(--font-main);
-            margin: 0;
-            padding: 0;
-            min-height: 100vh;
-            padding-bottom: 80px; /* 預留底部操作列空間 */
+        /* 圖片檢視器 */
+        #imageViewer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); z-index: 11000;
+            display: none; justify-content: center; align-items: center;
+        }
+        #imageViewer img { max-width: 95%; max-height: 80%; border-radius: 8px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        .close-img-btn {
+            position: absolute; top: 40px; right: 30px;
+            background: rgba(255,255,255,0.2); color: #fff; 
+            width: 44px; height: 44px; border-radius: 50%; font-size: 24px;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+            backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3);
         }
 
-        .container {
-            max-width: 1100px;
-            margin: 0 auto;
-            padding: 40px 20px;
+        /* 編輯彈窗 */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 10500;
+            display: none; justify-content: center; align-items: end;
+            backdrop-filter: blur(2px);
         }
-
-        /* --- Header (移除圖案，純文字) --- */
-        header {
-            text-align: center;
-            margin-bottom: 50px;
-            padding-bottom: 20px;
-            border-bottom: var(--border);
+        .modal-overlay.active { display: flex; }
+        .modal-content {
+            background: #F0ECE6; width: 100%; max-width: 600px; height: 90%; 
+            border-radius: 20px 20px 0 0; padding: 25px;
+            overflow-y: auto; position: relative; animation: slideUp 0.3s ease-out;
         }
+        @media (min-width: 768px) { .modal-overlay { align-items: center; } .modal-content { height: auto; max-height: 90%; border-radius: 12px; } }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-title { font-size: 1.5rem; font-weight: 900; color: var(--text-main); }
+        .close-modal { font-size: 28px; cursor: pointer; color: #999; padding: 5px; line-height: 1; }
 
-        h1 {
-            font-size: 4rem;
-            font-weight: 900;
-            margin: 0;
-            letter-spacing: -2px;
-            text-transform: uppercase;
-            line-height: 1;
+        /* 鎖定畫面 */
+        #lockScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 9999; display: none; flex-direction: column; justify-content: center; align-items: center; }
+        .pin-container { text-align: center; } .pin-title { font-size: 2rem; font-weight: 900; margin-bottom: 20px; }
+        .pin-input { padding: 15px; font-size: 24px; text-align: center; letter-spacing: 10px; border: 2px solid var(--text-main); border-radius: 8px; width: 200px; background: #fff; outline: none; font-family: monospace; }
+
+        /* 頂部工具 */
+        .top-container {
+            background: var(--bg-color); position: sticky; top: 0; z-index: 40;
+            border-bottom: 1px solid rgba(0,0,0,0.05); padding: 15px; margin-bottom: 5px;
         }
-
-        h1 span {
-            display: block;
-            font-size: 1.5rem;
-            font-weight: 700;
-            letter-spacing: 5px;
-            margin-top: 10px;
-        }
-
-        /* --- 統計數據條 --- */
-        .stats-bar {
-            background: var(--text-color);
-            color: var(--bg-color);
-            padding: 15px 20px;
-            margin-bottom: 30px;
-            display: flex;
-            justify-content: space-between;
-            font-family: monospace;
-            font-size: 1.1rem;
-            border: 2px solid var(--text-color);
-        }
-
-        .stat-group { display: flex; gap: 20px; }
-        .stat-item span { font-weight: 900; margin-left: 5px; }
-
-        /* --- 主佈局 --- */
-        .dashboard {
-            display: grid;
-            grid-template-columns: 350px 1fr;
-            gap: 40px;
-            align-items: start;
-        }
-
-        @media (max-width: 900px) {
-            .dashboard { grid-template-columns: 1fr; }
-            h1 { font-size: 3rem; }
-        }
-
-        /* --- 表單樣式 --- */
-        .form-panel {
-            background: var(--bg-color);
-            border: var(--border);
-            padding: 25px;
-            position: sticky;
-            top: 20px;
-            z-index: 10;
-        }
-
-        .panel-title {
-            font-size: 1.2rem;
-            font-weight: 900;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #ccc;
-            text-transform: uppercase;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .form-group { margin-bottom: 15px; }
+        .search-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+        .search-box { flex: 1; position: relative; }
+        .search-input { width: 100%; padding: 10px 10px 10px 35px; border: 1px solid #ccc; border-radius: 8px; background: #fff; font-size: 14px; height: 44px; }
+        .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); opacity: 0.5; }
+        .sort-btn { background: var(--text-main); color: #fff; border: none; padding: 0; width: 44px; border-radius: 8px; font-size: 16px; font-weight: bold; height: 44px; cursor: pointer; flex-shrink: 0; }
+        .filter-row { display: flex; gap: 10px; align-items: center; }
+        .filter-select { flex: 1; padding: 0 10px; border: 1px solid #ccc; border-radius: 8px; background: #fff; font-weight: bold; font-size: 13px; color: var(--text-main); height: 44px; text-align: left; }
         
-        label {
-            display: block;
-            font-size: 0.85rem;
-            font-weight: 700;
-            margin-bottom: 5px;
-        }
+        .sync-box { width: 44px; height: 44px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; color: #fff; flex-shrink: 0; transition: background 0.3s; }
+        .sync-box.ok { background: #2ecc71; }
+        .sync-box.loading { background: #f1c40f; color: #000; animation: pulse 1s infinite; }
+        .sync-box.error { background: #e74c3c; }
 
-        input, select, textarea {
-            width: 100%;
-            padding: 10px;
-            background: transparent;
-            border: 1px solid #999;
-            border-radius: 0;
-            color: var(--text-color);
-            font-family: inherit;
-            font-size: 0.95rem;
-        }
+        .summary-bar { background: var(--text-main); padding: 10px 20px; font-size: 13px; color: #fff; display: flex; justify-content: space-between; align-items: center; margin: 0 15px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .summary-val { color: #fff; font-weight: 900; font-family: monospace; font-size: 16px; }
 
-        input:focus, select:focus, textarea:focus {
-            outline: none;
-            border: 2px solid var(--text-color);
-            background: var(--white);
-        }
+        .view-section { display: none; padding: 20px; max-width: 1200px; margin: 0 auto; animation: fadeIn 0.2s ease; }
+        #view-home { padding: 0; }
+        .view-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        h2.page-title { font-size: 1.5rem; font-weight: 800; margin: 0 0 20px 0; padding-bottom: 10px; display: flex; align-items: center; gap: 15px; color: var(--text-main); }
+        .back-btn { font-size: 18px; background: #fff; border: 1px solid #ccc; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-main); }
 
-        textarea { resize: vertical; height: 80px; }
+        .card-grid { display: grid; grid-template-columns: 1fr; gap: 15px; padding: 15px; }
+        @media (min-width: 768px) { .card-grid { grid-template-columns: repeat(3, 1fr); } } 
+        
+        .merch-card { background: var(--card-bg); border: 1px solid transparent; border-radius: var(--radius); box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; display: flex; flex-direction: column; position: relative; transition: all 0.2s; }
+        .merch-card.selected { border: 2px solid var(--select-color); }
+        
+        /* 選擇框 (無勾勾) */
+        .card-select-overlay { position: absolute; top: 15px; right: 15px; z-index: 5; }
+        .custom-checkbox { width: 24px; height: 24px; border: 2px solid #fff; background: rgba(0,0,0,0.3); backdrop-filter: blur(2px); border-radius: 6px; cursor: pointer; transition: 0.2s; }
+        .merch-card.selected .custom-checkbox { background: var(--select-color); border-color: var(--select-color); }
+        
+        .card-status-bar { height: 6px; background: #eee; width: 94%; margin: 3px auto 0; border-radius: 4px; display: flex; gap: 2px; overflow: hidden; }
+        .status-segment { flex: 1; opacity: 0.2; background: var(--text-main); }
+        .status-segment.active { opacity: 1; }
+        
+        .card-header { padding: 15px; display: flex; gap: 12px; border-bottom: 1px solid #f5f5f5; }
+        .card-thumb { width: 70px; height: 70px; background: #f5f5f5; border-radius: 8px; object-fit: cover; flex-shrink: 0; border: 1px solid #eee; cursor: zoom-in; }
+        .card-title-group { flex: 1; overflow: hidden; display: flex; flex-direction: column; justify-content: center; padding-right: 30px; }
+        .category-tag { font-size: 10px; background: #f0f0f0; color: #666; padding: 2px 8px; border-radius: 12px; font-weight: 600; display: inline-block; margin-bottom: 4px; width: fit-content; }
+        .group-tag { font-size: 10px; background: var(--text-main); color: #fff; padding: 2px 8px; border-radius: 12px; font-weight: 600; display: inline-block; margin-bottom: 4px; margin-right: 5px; width: fit-content; }
+        .remove-group { cursor: pointer; margin-left: 5px; opacity: 0.7; }
+        .card-title { font-size: 16px; font-weight: 800; margin: 0 0 3px 0; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .card-subtitle { font-size: 12px; color: #888; }
+        .contact-link { color: #000; text-decoration: underline; font-weight: bold; cursor: pointer; }
+        
+        .info-grid { padding: 12px 15px; display: grid; grid-template-columns: 80px 1fr; gap: 6px; font-size: 13px; align-items: baseline; }
+        .label { color: #888; font-weight: 500; text-align-last: justify; }
+        .value { font-weight: 600; text-align: right; font-family: 'Inter', monospace; color: #333; }
+        .value.highlight { font-weight: 900; font-size: 15px; border-top: 1px dashed #eee; padding-top: 5px; margin-top: 5px; color: #000; }
+        
+        .note-toggle-btn { font-size: 12px; color: #555; background: #fcfcfc; border: 1px solid #f0f0f0; width: 100%; padding: 8px; text-align: center; cursor: pointer; border-left:none; border-right:none; }
+        .note-content { display: none; padding: 10px 15px; background: #fffbe6; font-size: 12px; color: #555; white-space: pre-wrap; line-height: 1.4; }
+        .note-content.show { display: block; }
 
-        .row { display: flex; gap: 10px; }
+        .checklist-col { padding: 10px 15px; background: #fff; border-top: 1px solid #f5f5f5; display: flex; flex-direction: column; gap: 8px; }
+        .check-group { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: #666; height: 28px; }
+        .check-left { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .check-box { width: 16px; height: 16px; border: 1px solid #ccc; border-radius: 4px; display: block; background: #fff; transition: all 0.2s; }
+        .check-group.checked .check-box { background: var(--text-main); border-color: var(--text-main); }
+        .check-group.checked .check-label { font-weight: bold; color: #000; }
+        .mini-date { border: none; background: #f9f9f9; font-size: 12px; color: #333; border-radius: 4px; text-align: center; width: 110px; font-family: 'Inter', monospace; padding: 2px 5px; visibility: hidden; }
+        .check-group.checked .mini-date { visibility: visible; }
 
-        .payment-toggle {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-        .radio-label {
-            flex: 1;
-            border: 1px solid #999;
-            padding: 10px;
-            text-align: center;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: 0.2s;
-        }
-        input[type="radio"] { display: none; }
-        input[type="radio"]:checked + .radio-label {
-            background: var(--text-color);
-            color: var(--white);
-            border-color: var(--text-color);
-            font-weight: bold;
-        }
+        .seller-info { padding: 8px 15px; background: #fcfcfc; border-top: 1px solid #f5f5f5; font-size: 11px; color: #666; text-align: center; display: flex; justify-content: space-between; }
+        .seller-link { color: #000; text-decoration: underline; cursor: pointer; }
+
+        .card-actions { display: grid; grid-template-columns: repeat(4, 1fr); text-align: center; background: #fff; border-top: 1px solid #f5f5f5; }
+        .action-btn { background: transparent; border: none; padding: 12px 0; font-size: 12px; font-weight: 600; border-right: 1px solid #f5f5f5; color: #555; cursor: pointer; }
+        .action-btn:last-child { border: none; }
+        .action-btn:active { background: #f9f9f9; }
+
+        .form-container { background: var(--card-bg); padding: 25px; border: var(--border); border-radius: var(--radius); box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+        .form-row { display: flex; gap: 15px; margin-bottom: 15px; }
+        .form-col { flex: 1; width: 50%; } 
+        .form-group { margin-bottom: 18px; }
+        label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; color: #333; }
+        input, select, textarea { width: 100%; padding: 0 12px; border: 1px solid #ddd; border-radius: 8px; background: #fcfcfc; font-size: 15px; color: var(--text-main); height: 44px; line-height: 44px; box-sizing: border-box; -webkit-appearance: none; appearance: none; transition: border 0.2s; }
+        input:focus, select:focus, textarea:focus { border-color: #666; outline: none; background: #fff; }
+        textarea { height: 80px; line-height: 1.5; padding: 10px; }
+        input[type="file"] { padding: 10px; line-height: 1.2; height: 44px; border: 1px dashed #ccc; }
+        .btn-main { width: 100%; background: var(--text-main); color: #fff; padding: 15px; border: none; font-weight: 900; font-size: 16px; cursor: pointer; letter-spacing: 1px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .image-group { display: flex; gap: 10px; }
+        .del-img-btn { height: 44px; width: 44px; border: 1px solid #ccc; border-radius: 8px; background: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #d63031; font-weight: bold; }
+        #transferFields { background: #f4f4f4; border: 1px solid #eee; padding: 15px; margin-bottom: 15px; border-radius: 8px; }
+        .info-input-grid { display: flex; gap: 10px; background: #f9f9f9; padding: 15px; border: 1px solid #eee; border-radius: 8px; }
+        .info-input-item { flex: 1; text-align: center; }
+        .info-input-item label { font-size: 11px; color: #666; }
+        .info-input-item input { text-align: right; background: #fff; }
+
+        .settings-menu-btn { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 18px; background: #fff; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 12px; font-weight: 700; font-size: 15px; cursor: pointer; text-align: left; border-radius: 12px; color: #333; transition: transform 0.1s; }
+        .section-header { font-size: 14px; color: #333; font-weight: 900; margin: 25px 0 10px 5px; }
+        .clean-btn-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+        .clean-btn { background: #fff; border: 1px solid #ddd; color: var(--text-main); padding: 16px; border-radius: 12px; font-weight: 700; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .clean-btn.danger { background: #FDE8E8; border-color: #F8B4B4; color: #C0392B; }
+        
+        .toggle-switch { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; }
+        .switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #eee; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        input:checked + .slider { background-color: var(--text-main); }
+        input:checked + .slider:before { transform: translateX(24px); }
+
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: var(--nav-height); background: #fff; border-top: 1px solid #eee; display: flex; justify-content: space-around; align-items: center; z-index: 100; padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -2px 10px rgba(0,0,0,0.03); }
+        .nav-item { flex: 1; text-align: center; color: #aaa; font-size: 10px; font-weight: 600; cursor: pointer; padding-top: 10px; transition: color 0.2s; }
+        .nav-item.active { color: var(--text-main); }
+        .nav-icon { font-size: 22px; display: block; margin-bottom: 3px; }
+
+        .bulk-actions-bar { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(150px); background: var(--text-main); color: #fff; padding: 10px 20px; display: none; gap: 10px; align-items: center; border-radius: 50px; box-shadow: 0 10px 20px rgba(0,0,0,0.3); transition: transform 0.3s; z-index: 10100; white-space: nowrap; overflow-x: auto; max-width: 90%; }
+        .bulk-actions-bar.active { display: flex; transform: translateX(-50%) translateY(0); }
+        .bulk-btn { background: #fff; color: #000; border: none; padding: 5px 12px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 12px; }
+        .bulk-btn.danger { background: var(--accent); color: #fff; }
+        .bulk-btn.select-all { background: #f39c12; color: #fff; }
 
         .hidden { display: none; }
-
-        .btn-submit {
-            width: 100%;
-            background: var(--text-color);
-            color: var(--bg-color);
-            border: none;
-            padding: 15px;
-            font-size: 1rem;
-            font-weight: 900;
-            cursor: pointer;
-            margin-top: 10px;
-            transition: transform 0.1s;
-        }
-        .btn-submit:hover { transform: scale(0.98); }
-
-        /* --- 卡片列表樣式 --- */
-        .merch-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 25px;
-        }
-
-        .merch-card {
-            background: var(--white);
-            border: var(--border);
-            position: relative;
-            transition: transform 0.2s;
-        }
-        
-        .merch-card.selected {
-            border-color: var(--accent-color);
-            box-shadow: 0 0 0 2px var(--accent-color);
-        }
-
-        .merch-card.refunded {
-            opacity: 0.6;
-            border-style: dashed;
-        }
-
-        /* 選擇框樣式 */
-        .card-select-overlay {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            z-index: 5;
-        }
-        
-        .custom-checkbox {
-            width: 24px;
-            height: 24px;
-            border: 2px solid var(--text-color);
-            background: var(--white);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            color: transparent;
-        }
-        
-        .merch-card.selected .custom-checkbox {
-            background: var(--text-color);
-            color: var(--white);
-        }
-
-        .card-img-wrap {
-            height: 200px;
-            background: #e0e0e0;
-            border-bottom: var(--border);
-            overflow: hidden;
-            position: relative;
-        }
-        .merch-img { width: 100%; height: 100%; object-fit: cover; }
-
-        .card-body { padding: 15px; }
-
-        .card-header {
-            margin-bottom: 10px;
-            padding-left: 30px; /* 為了避開 checkbox */
-        }
-        .item-name {
-            font-size: 1.1rem;
-            font-weight: 900;
-            margin: 0;
-            line-height: 1.3;
-        }
-        .order-date {
-            font-size: 0.75rem;
-            color: #666;
-            white-space: nowrap;
-        }
-
-        /* 合併訂單標籤 */
-        .group-tag {
-            display: inline-block;
-            background: var(--text-color);
-            color: var(--white);
-            font-size: 0.75rem;
-            padding: 2px 8px;
-            margin-top: 5px;
-            font-weight: bold;
-            border-radius: 2px;
-        }
-        .group-tag .remove-group {
-            margin-left: 5px;
-            cursor: pointer;
-            color: #aaa;
-        }
-        .group-tag .remove-group:hover { color: #fff; }
-
-        /* 對帳資訊區 */
-        .finance-block {
-            background: #f4f4f4;
-            padding: 10px;
-            margin: 10px 0;
-            font-size: 0.85rem;
-            border-left: 4px solid var(--text-color);
-        }
-        .finance-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
-        .finance-total { 
-            border-top: 1px dashed #aaa; 
-            padding-top: 5px; 
-            margin-top: 5px; 
-            font-weight: 900; 
-            font-size: 1rem; 
-            text-align: right;
-        }
-
-        .refund-badge {
-            color: var(--accent-color);
-            font-weight: bold;
-            display: block;
-            text-align: right;
-            font-size: 0.8rem;
-            margin-top: 5px;
-        }
-
-        /* 勾選式進度條 */
-        .progress-checklist {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin: 15px 0;
-            padding: 10px 0;
-            border-top: 1px solid #eee;
-            border-bottom: 1px solid #eee;
-        }
-        .check-item {
-            font-size: 0.75rem;
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-            user-select: none;
-        }
-        .check-box {
-            width: 14px;
-            height: 14px;
-            border: 1px solid var(--text-color);
-            margin-right: 4px;
-            display: inline-block;
-            background: transparent;
-        }
-        .check-item.checked .check-box {
-            background: var(--text-color);
-        }
-
-        /* 按鈕區 */
-        .card-links {
-            display: flex;
-            gap: 5px;
-            margin-bottom: 10px;
-        }
-        .link-btn {
-            flex: 1;
-            text-align: center;
-            text-decoration: none;
-            font-size: 0.75rem;
-            border: 1px solid #ccc;
-            color: #555;
-            padding: 5px;
-            display: block;
-        }
-        .link-btn:hover { background: #eee; }
-
-        .notes-area {
-            font-size: 0.8rem;
-            color: #555;
-            background: #fff8dc;
-            padding: 8px;
-            margin-bottom: 10px;
-            white-space: pre-wrap;
-        }
-
-        .card-actions {
-            display: flex;
-            border-top: var(--border);
-            margin: 0 -15px -15px -15px;
-        }
-        .action-btn {
-            flex: 1;
-            background: transparent;
-            border: none;
-            border-right: 1px solid #ccc;
-            padding: 10px;
-            cursor: pointer;
-            font-weight: 700;
-            color: var(--text-color);
-            font-size: 0.8rem;
-        }
-        .action-btn:last-child { border: none; }
-        .action-btn:hover { background: #eee; }
-        .btn-refund { color: var(--accent-color); }
-
-        /* --- 底部批量操作列 --- */
-        .bulk-actions-bar {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%) translateY(100px);
-            background: var(--text-color);
-            color: var(--white);
-            padding: 15px 30px;
-            display: flex;
-            gap: 20px;
-            align-items: center;
-            border-radius: 50px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 100;
-        }
-        
-        .bulk-actions-bar.active {
-            transform: translateX(-50%) translateY(0);
-        }
-
-        .bulk-btn {
-            background: var(--white);
-            color: var(--text-color);
-            border: none;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: 900;
-            cursor: pointer;
-            font-size: 0.9rem;
-        }
-        
-        .bulk-btn.danger {
-            background: var(--accent-color);
-            color: white;
-        }
-
-        .bulk-info {
-            font-weight: bold;
-            font-size: 1.1rem;
-        }
-        
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <!-- 標題區域 -->
-        <header>
-            <h1>CORTIS <span>MERCH TRACKER</span></h1>
-        </header>
+    <div id="imageViewer">
+        <div class="close-img-btn" onclick="document.getElementById('imageViewer').style.display='none'">×</div>
+        <img id="fullImage" src="">
+    </div>
 
-        <!-- 統計 -->
-        <div class="stats-bar">
-            <div class="stat-group">
-                <div class="stat-item">總項目: <span id="totalItems">0</span></div>
+    <div id="toast-container"></div>
+
+    <div id="lockScreen">
+        <div class="pin-container">
+            <div class="pin-title">LOCKED</div>
+            <div class="pin-msg">請輸入 PIN 碼</div>
+            <input type="password" id="pinInput" class="pin-input" maxlength="4" pattern="[0-9]*" inputmode="numeric">
+        </div>
+    </div>
+
+    <!-- 編輯彈窗 -->
+    <div id="editModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">編輯紀錄</div>
+                <div class="close-modal" onclick="closeEditModal()">×</div>
             </div>
-            <div class="stat-item">總支出: <span id="totalSpent">NT$ 0</span></div>
+            <form id="editForm" onsubmit="handleEditSubmit(event)">
+                <input type="hidden" name="editId">
+                <div class="form-group"><label>商品名稱 <span style="color:red">*</span></label><input type="text" name="name" required></div>
+                <div class="form-row">
+                    <div class="form-col"><label>分類</label><select name="category"><option>周邊</option><option>專輯</option><option>小卡</option><option>票務</option><option>其他</option></select></div>
+                    <div class="form-col"><label>購買來源</label><input type="text" name="source"></div>
+                </div>
+                <div class="form-group"><label>下單日期 <span style="color:red">*</span></label><input type="date" name="orderDate" required></div>
+                <div class="form-group"><label>賣家聯絡資訊</label><div class="form-row" style="margin:0;"><div class="form-col"><input type="text" name="contact" placeholder="名稱"></div><div class="form-col"><input type="url" name="contactLink" placeholder="連結"></div></div></div>
+                <div class="form-group"><label>付款方式</label><select name="paymentType" onchange="toggleTransferFields(this)"><option value="Pending">待付款</option><option value="COD">貨到付款</option><option value="Transfer">銀行匯款</option></select></div>
+                <div class="transferFields hidden" style="background:#f4f4f4; border:1px solid #eee; padding:15px; margin-bottom:15px; border-radius:8px;"><div class="form-row"><div class="form-col"><label>匯款日期</label><input type="date" name="transferDate"></div><div class="form-col"><label>金額</label><input type="number" name="transferAmount"></div></div></div>
+                <div class="form-group"><label>費用 (NT$)</label><div class="info-input-grid"><div class="info-input-item"><label>單價</label><input type="number" name="price"></div><div class="info-input-item"><label>二補</label><input type="number" name="secondPay"></div><div class="info-input-item"><label>運費</label><input type="number" name="shipping"></div></div></div>
+                <div class="form-group"><label>相關連結</label><div style="display:flex; flex-direction:column; gap:10px;"><input type="url" name="link" placeholder="下單連結..."><input type="url" name="reconcileLink" placeholder="對帳表連結..."></div></div>
+                <div class="form-group"><label>備註</label><textarea name="notes" style="height:60px;"></textarea></div>
+                <div class="form-group"><label>圖片</label><div class="image-group"><input type="file" name="imageInput" accept="image/*" style="flex:1;"><button type="button" class="del-img-btn" onclick="clearEditImage()">🗑</button></div></div>
+                <button type="submit" class="btn-main">更新儲存</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 列表頁 -->
+    <div id="view-home" class="view-section active">
+        <div class="top-container">
+            <div class="search-row">
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="searchInput" class="search-input" placeholder="搜尋商品名稱..." oninput="renderList()">
+                </div>
+                <button class="sort-btn" onclick="toggleSort()">⇅</button>
+            </div>
+            <div class="filter-row">
+                <select id="monthFilter" class="filter-select" onchange="renderList()">
+                    <option value="all">📅 所有月份</option>
+                </select>
+                <select id="categoryFilter" class="filter-select" onchange="renderList()">
+                    <option value="all">📂 所有分類</option>
+                    <option value="周邊">周邊</option>
+                    <option value="專輯">專輯</option>
+                    <option value="小卡">小卡</option>
+                    <option value="票務">票務</option>
+                    <option value="其他">其他</option>
+                </select>
+                <div id="syncWrapper" class="sync-box ok">待命</div>
+            </div>
         </div>
 
-        <div class="dashboard">
-            <!-- 左側：輸入表單 -->
-            <div class="form-panel">
-                <div class="panel-title">新增紀錄</div>
-                <form id="merchForm">
-                    <div class="form-group">
-                        <label>商品名稱</label>
-                        <input type="text" id="name" required placeholder="輸入周邊名稱...">
-                    </div>
+        <div class="summary-bar">
+            <span>當前花費</span>
+            <span class="summary-val" id="summaryTotal">NT$ 0</span>
+            <span style="font-size:12px; margin-left:10px;">( <span id="summaryCount">0</span> 筆 )</span>
+        </div>
 
-                    <div class="row">
-                        <div class="form-group" style="flex:1">
-                            <label>下單日期</label>
-                            <input type="date" id="orderDate" required>
-                        </div>
-                        <div class="form-group" style="flex:1">
-                            <label>購買來源</label>
-                            <input type="text" id="source" placeholder="例如: 官網 / 推特">
-                        </div>
-                    </div>
+        <div id="merchGrid" class="card-grid" style="margin-top:15px;"></div>
+        <div id="emptyState" style="text-align:center; padding:50px; color:#999; display:none;">目前沒有紀錄</div>
+    </div>
 
-                    <div class="form-group">
-                        <label>付款方式</label>
-                        <div class="payment-toggle">
-                            <input type="radio" name="paymentType" id="payCOD" value="COD" checked onclick="togglePaymentFields()">
-                            <label for="payCOD" class="radio-label">貨到付款</label>
-                            
-                            <input type="radio" name="paymentType" id="payTransfer" value="Transfer" onclick="togglePaymentFields()">
-                            <label for="payTransfer" class="radio-label">銀行匯款</label>
-                        </div>
-                    </div>
+    <!-- 新增頁 -->
+    <div id="view-add" class="view-section">
+        <div class="form-container">
+            <form id="addForm" onsubmit="handleAddSubmit(event)">
+                <div class="form-group"><label>商品名稱 <span style="color:red">*</span></label><input type="text" name="name" required></div>
+                <div class="form-row">
+                    <div class="form-col"><label>分類</label><select name="category"><option>周邊</option><option>專輯</option><option>小卡</option><option>票務</option><option>其他</option></select></div>
+                    <div class="form-col"><label>購買來源</label><input type="text" name="source" placeholder="例: 官網"></div>
+                </div>
+                <div class="form-group"><label>下單日期 <span style="color:red">*</span></label><input type="date" name="orderDate" required></div>
+                <div class="form-group"><label>賣家聯絡資訊</label><div class="form-row" style="margin-bottom:0;"><div class="form-col"><input type="text" name="contact" placeholder="名稱"></div><div class="form-col"><input type="url" name="contactLink" placeholder="連結"></div></div></div>
+                <div class="form-group"><label>付款方式</label><select name="paymentType" onchange="toggleTransferFields(this)"><option value="Pending">待付款</option><option value="COD">貨到付款</option><option value="Transfer">銀行匯款</option></select></div>
+                <div class="transferFields hidden" style="background:#f4f4f4; border:1px solid #eee; padding:15px; margin-bottom:15px; border-radius:8px;"><div class="form-row"><div class="form-col"><label>匯款日期</label><input type="date" name="transferDate"></div><div class="form-col"><label>金額</label><input type="number" name="transferAmount"></div></div></div>
+                <div class="form-group"><label>費用 (NT$)</label><div class="info-input-grid"><div class="info-input-item"><label>單價</label><input type="number" name="price"></div><div class="info-input-item"><label>二補</label><input type="number" name="secondPay"></div><div class="info-input-item"><label>運費</label><input type="number" name="shipping"></div></div></div>
+                <div class="form-group"><label>連結</label><div style="display:flex; flex-direction:column; gap:10px;"><input type="url" name="link" placeholder="下單連結..."><input type="url" name="reconcileLink" placeholder="對帳表連結..."></div></div>
+                <div class="form-group"><label>備註</label><textarea name="notes" style="height:60px;"></textarea></div>
+                <div class="form-group"><label>圖片</label><div class="image-group"><input type="file" name="imageInput" accept="image/*" style="flex:1;"><button type="button" class="del-img-btn" onclick="clearAddImage()">🗑</button></div></div>
+                <button type="submit" class="btn-main">儲存</button>
+            </form>
+        </div>
+    </div>
 
-                    <!-- 匯款專用欄位 -->
-                    <div id="transferFields" class="hidden" style="background: #e8e4de; padding: 10px; margin-bottom: 15px;">
-                        <div class="row">
-                            <div class="form-group" style="flex:1">
-                                <label>匯款日期</label>
-                                <input type="date" id="transferDate">
-                            </div>
-                            <div class="form-group" style="flex:1">
-                                <label>匯款金額</label>
-                                <input type="number" id="transferAmount" placeholder="0">
-                            </div>
-                        </div>
-                    </div>
+    <!-- 管理頁 -->
+    <div id="view-settings" class="view-section">
+        <h2 class="page-title">管理</h2>
+        <button class="settings-menu-btn" onclick="openSubPage('data')">📂 資料匯入 / 備份</button>
+        <button class="settings-menu-btn" onclick="openSubPage('security')">🔒 安全性設定</button>
+    </div>
 
-                    <div class="row">
-                        <div class="form-group" style="flex:1">
-                            <label>商品原價</label>
-                            <input type="number" id="price" placeholder="0" required>
-                        </div>
-                        <div class="form-group" style="flex:1">
-                            <label>二補金額</label>
-                            <input type="number" id="secondPay" placeholder="0">
-                        </div>
-                        <div class="form-group" style="flex:1">
-                            <label>國內運費</label>
-                            <input type="number" id="shipping" placeholder="0">
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>訂購連結</label>
-                        <input type="url" id="link" placeholder="原始商品連結...">
-                    </div>
-
-                    <div class="form-group">
-                        <label>賣貨便連結</label>
-                        <input type="url" id="sellerLink" placeholder="賣場/賣貨便連結...">
-                    </div>
-
-                    <div class="form-group">
-                        <label>備註</label>
-                        <textarea id="notes" placeholder="紀錄喊單帳號、交易細節..."></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label>商品圖片</label>
-                        <input type="file" id="imageInput" accept="image/*">
-                    </div>
-
-                    <button type="submit" class="btn-submit">建立紀錄</button>
-                </form>
+    <!-- 資料匯入/備份 子頁面 -->
+    <div id="view-settings-data" class="view-section">
+        <h2 class="page-title"><button class="back-btn" onclick="openSubPage('main')">←</button> 資料管理</h2>
+        
+        <div class="section-header">Excel 整合</div>
+        <div class="clean-btn-group">
+            <button class="clean-btn" onclick="downloadTemplate()">📊 下載 Excel 範本 <span>›</span></button>
+            <div style="position:relative;">
+                <button class="clean-btn" style="width:100%" onclick="document.getElementById('excelInput').click()">📥 匯入 Excel 檔案 <span>›</span></button>
+                <input type="file" id="excelInput" onchange="importExcel(this)" accept=".xlsx, .xls, .csv" style="display:none;">
             </div>
+        </div>
 
-            <!-- 右側：商品列表 -->
-            <div id="merchList" class="merch-grid">
-                <!-- Javascript will render cards here -->
+        <div class="section-header">系統備份</div>
+        <div class="clean-btn-group">
+            <button class="clean-btn" onclick="exportData()">⬇ 下載 JSON 備份 <span>›</span></button>
+            <div style="position:relative;">
+                <button class="clean-btn" style="width:100%" onclick="document.getElementById('jsonInput').click()">⬆ 匯入 JSON 備份 <span>›</span></button>
+                <input type="file" id="jsonInput" onchange="importData(this)" accept=".json" style="display:none;">
+            </div>
+        </div>
+
+        <div class="section-header">雲端與重置</div>
+        <div class="clean-btn-group">
+            <button class="clean-btn" onclick="uploadToCloud()">⬆ 上傳至雲端 (備份) <span>›</span></button>
+            <button class="clean-btn" onclick="downloadFromCloud()">⬇ 從雲端下載 (還原) <span>›</span></button>
+            <button class="clean-btn danger" onclick="clearAllData()">⚠ 清空所有資料</button>
+        </div>
+    </div>
+
+    <!-- 安全性 子頁面 -->
+    <div id="view-settings-security" class="view-section">
+        <h2 class="page-title"><button class="back-btn" onclick="openSubPage('main')">←</button> 安全性</h2>
+        <div class="settings-card" style="background:#fff; padding:20px; border-radius:12px; border:1px solid #eee;">
+            <div class="toggle-switch">
+                <span>啟用 PIN 碼鎖定</span>
+                <label class="switch"><input type="checkbox" id="pinToggle" onchange="togglePinSetting()"><span class="slider"></span></label>
+            </div>
+            <div id="pinChangeArea" class="hidden" style="margin-top:10px; border-top:1px solid #eee; padding-top:10px;">
+                <input type="number" id="newPinInput" placeholder="輸入新 PIN (4碼)" style="margin-bottom:10px;" maxlength="4">
+                <button class="btn-main" onclick="saveNewPin()">儲存新密碼</button>
             </div>
         </div>
     </div>
 
-    <!-- 底部批量操作列 -->
+    <!-- 批量操作列 -->
     <div id="bulkActions" class="bulk-actions-bar">
-        <div class="bulk-info">已選取 <span id="selectedCount">0</span> 筆</div>
-        <button class="bulk-btn" onclick="mergeSelectedItems()">🔗 合併訂單</button>
+        <div style="font-size:12px;">已選 <span id="selectedCount">0</span> 筆</div>
+        <button class="bulk-btn select-all" onclick="selectAllVisible()">✅ 全選</button>
+        <button class="bulk-btn" onclick="mergeSelectedItems()">🔗 合併</button>
         <button class="bulk-btn danger" onclick="deleteSelectedItems()">🗑 刪除</button>
-        <button class="bulk-btn" onclick="clearSelection()" style="background:transparent; color:#fff; border:1px solid #fff;">取消</button>
+        <button class="bulk-btn" onclick="clearSelection()" style="background:#666; color:#fff;">取消</button>
+    </div>
+
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="switchView('home', this)"><span class="nav-icon">☰</span>列表</div>
+        <div class="nav-item" onclick="switchView('add', this)"><span class="nav-icon">＋</span>新增</div>
+        <div class="nav-item" onclick="switchView('settings', this)"><span class="nav-icon">⚙</span>管理</div>
     </div>
 
     <script>
-            <script>
-        // 預設圖片 (Base64)
-        const DEFAULT_IMG = 'data:image/svg+xml;charset=UTF-8,%3Csvg width%3D%22300%22 height%3D%22200%22 xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 300 200%22 preserveAspectRatio%3D%22none%22%3E%3Crect width%3D%22300%22 height%3D%22200%22 fill%3D%22%23ddd%22%2F%3E%3Ctext x%3D%2250%25%22 y%3D%2250%25%22 dominant-baseline%3D%22middle%22 text-anchor%3D%22middle%22 fill%3D%22%23555%22 font-family%3D%22sans-serif%22%3ENO IMAGE%3C%2Ftext%3E%3C%2Fsvg%3E';
+        const API_URL = "https://script.google.com/macros/s/AKfycbyeGblocTD-g8e3yUbG0YSMBRbT-6Uwfu2gF09Bjgqt32C_GIjBwnl-Ni2-cfDwXQfl4g/exec";
+        const STORAGE_KEY = 'cortis_v33_data';
+        const SETTINGS_KEY = 'cortis_v33_settings';
+        
+        let items = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+        let appSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { pinEnabled: false, pin: "0000" };
+        
+        let sortDesc = true;
+        let selectedIds = new Set();
+        let isSyncing = false;
+        let editImageTemp = null;
 
-        const form = document.getElementById('merchForm');
-        const merchList = document.getElementById('merchList');
-        const totalItemsEl = document.getElementById('totalItems');
-        const totalSpentEl = document.getElementById('totalSpent');
-        const transferFields = document.getElementById('transferFields');
-        const bulkActionsBar = document.getElementById('bulkActions');
-        const selectedCountEl = document.getElementById('selectedCount');
+        const views = { 
+            home: document.getElementById('view-home'), 
+            add: document.getElementById('view-add'), 
+            settings: document.getElementById('view-settings'),
+            settingsData: document.getElementById('view-settings-data'),
+            settingsSecurity: document.getElementById('view-settings-security')
+        };
+        const STATUS_KEYS = ['notArrived', 'pendingShip', 'shipped', 'pickedUp'];
+        const STATUS_LABELS = { notArrived:'未到貨', pendingShip:'待出貨', shipped:'已出貨', pickedUp:'取貨' };
+        const PAYMENT_LABELS = { Pending:'待付款', COD:'貨到付款', Transfer:'銀行匯款' };
 
-        document.getElementById('orderDate').valueAsDate = new Date();
+        window.onload = () => {
+            document.getElementById('pinToggle').checked = appSettings.pinEnabled;
+            if(appSettings.pinEnabled) {
+                document.getElementById('lockScreen').style.display = 'flex';
+                document.getElementById('pinInput').addEventListener('input', checkPin);
+                document.getElementById('pinInput').focus();
+            } else { initApp(); }
+        };
 
-        // 讀取資料
-        let merchData = [];
-        let selectedIds = new Set(); 
-
-        // 安全讀取資料
-        try {
-            merchData = JSON.parse(localStorage.getItem('cortisTrackerDataV2')) || [];
-        } catch (e) {
-            console.error("讀取資料失敗", e);
-            merchData = [];
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            container.innerHTML = '';
+            const toast = document.createElement('div');
+            const icon = type === 'success' ? '<i>✅</i>' : '<i>❌</i>';
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `${icon} <span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.remove(); }, 3000);
         }
 
-        function init() {
-            renderMerch();
-            updateStats();
-        }
-
-        // 切換匯款欄位顯示
-        function togglePaymentFields() {
-            const isTransfer = document.getElementById('payTransfer').checked;
-            const fields = document.getElementById('transferFields');
-            if (isTransfer) {
-                fields.classList.remove('hidden');
-            } else {
-                fields.classList.add('hidden');
+        function checkPin(e) {
+            if (e.target.value === appSettings.pin) {
+                document.getElementById('lockScreen').style.display = 'none';
+                initApp();
             }
         }
-        window.togglePaymentFields = togglePaymentFields; // 確保全域可呼叫
 
-        // --- 圖片壓縮功能 (關鍵修正) ---
-        const getBase64 = (file) => {
+        function initApp() {
+            // 資料自動修復機制：確保 items 是陣列
+            if(!Array.isArray(items)) { items = []; }
+            renderList(); populateMonthFilter();
+            document.querySelector('#addForm [name="orderDate"]').valueAsDate = new Date();
+            updateSyncStatus('ready');
+            syncWithCloud();
+        }
+
+        // --- 強制綁定函式 ---
+        window.showImage = function(src) {
+            if(!src) return;
+            document.getElementById('fullImage').src = src;
+            document.getElementById('imageViewer').style.display = 'flex';
+        };
+
+        window.toggleSort = function() { sortDesc = !sortDesc; renderList(); };
+        window.clearAddImage = function() { document.querySelector('#addForm [name="imageInput"]').value = ''; };
+        window.clearEditImage = function() { document.querySelector('#editForm [name="imageInput"]').value = ''; editImageTemp = ''; };
+        
+        window.toggleTransferFields = function(select) { 
+            const form = select.closest('form');
+            const div = form.querySelector('.transferFields');
+            if (select.value === 'Transfer') div.classList.remove('hidden'); 
+            else div.classList.add('hidden'); 
+        };
+
+        // --- 新增邏輯 ---
+        window.handleAddSubmit = async function(e) {
+            e.preventDefault();
+            const form = e.target;
+            const btn = form.querySelector('button[type="submit"]');
+            if (btn.disabled) return;
+            btn.innerText = "處理中..."; btn.disabled = true;
+
+            const name = form.querySelector('[name="name"]').value;
+            const orderDate = form.querySelector('[name="orderDate"]').value;
+
+            if(!name || !orderDate) {
+                showToast("請填寫商品名稱與下單日期", "error"); 
+                btn.innerText = "儲存"; btn.disabled = false; return;
+            }
+
+            try {
+                const imgInput = form.querySelector('[name="imageInput"]');
+                let imgData = "";
+                if(imgInput.files && imgInput.files[0]) {
+                    try { imgData = await compressImage(imgInput.files[0]); }
+                    catch(err) { console.warn("圖片壓縮失敗"); }
+                }
+
+                const newItem = {
+                    id: String(Date.now()), 
+                    name: name,
+                    category: form.querySelector('[name="category"]').value,
+                    orderDate: orderDate,
+                    source: form.querySelector('[name="source"]').value,
+                    contact: form.querySelector('[name="contact"]').value,
+                    contactLink: form.querySelector('[name="contactLink"]').value,
+                    paymentType: form.querySelector('[name="paymentType"]').value,
+                    transferDate: form.querySelector('[name="transferDate"]').value,
+                    transferAmount: Number(form.querySelector('[name="transferAmount"]').value),
+                    price: Number(form.querySelector('[name="price"]').value),
+                    secondPay: Number(form.querySelector('[name="secondPay"]').value),
+                    shipping: Number(form.querySelector('[name="shipping"]').value),
+                    link: form.querySelector('[name="link"]').value,
+                    reconcileLink: form.querySelector('[name="reconcileLink"]').value,
+                    notes: form.querySelector('[name="notes"]').value,
+                    imageSrc: imgData,
+                    group: null, 
+                    status: {notArrived:true, pendingShip:false, shipped:false, pickedUp:false},
+                    dates: {pendingShip:'', shipped:'', pickedUp:''},
+                    refund: { isRefunded: false } 
+                };
+
+                items.unshift(newItem);
+                saveData(); 
+                form.reset();
+                document.querySelector('#addForm [name="orderDate"]').valueAsDate = new Date();
+                populateMonthFilter();
+                switchView('home', document.querySelectorAll('.nav-item')[0]);
+                showToast("新增成功！");
+                
+            } catch (error) { 
+                console.error(error);
+                showToast("錯誤: " + error.message, "error"); 
+            } finally { 
+                btn.innerText = "儲存"; btn.disabled = false; 
+            }
+        };
+
+        // --- 編輯邏輯 ---
+        window.handleEditSubmit = async function(e) {
+            e.preventDefault();
+            const form = e.target;
+            const id = form.querySelector('[name="editId"]').value;
+            const idx = items.findIndex(i => String(i.id) === String(id));
+            
+            if(idx === -1) { showToast("找不到資料", "error"); return; }
+
+            const imgInput = form.querySelector('[name="imageInput"]');
+            let imgData = editImageTemp; 
+            
+            if(imgInput.files && imgInput.files[0]) {
+                try { imgData = await compressImage(imgInput.files[0]); }
+                catch(err) { console.warn("圖片壓縮失敗"); }
+            } else if (imgInput.value === '' && !editImageTemp) {
+                imgData = ''; 
+            }
+
+            items[idx] = {
+                ...items[idx],
+                name: form.querySelector('[name="name"]').value,
+                category: form.querySelector('[name="category"]').value,
+                orderDate: form.querySelector('[name="orderDate"]').value,
+                source: form.querySelector('[name="source"]').value,
+                contact: form.querySelector('[name="contact"]').value,
+                contactLink: form.querySelector('[name="contactLink"]').value,
+                paymentType: form.querySelector('[name="paymentType"]').value,
+                transferDate: form.querySelector('[name="transferDate"]').value,
+                transferAmount: Number(form.querySelector('[name="transferAmount"]').value),
+                price: Number(form.querySelector('[name="price"]').value),
+                secondPay: Number(form.querySelector('[name="secondPay"]').value),
+                shipping: Number(form.querySelector('[name="shipping"]').value),
+                link: form.querySelector('[name="link"]').value,
+                reconcileLink: form.querySelector('[name="reconcileLink"]').value,
+                notes: form.querySelector('[name="notes"]').value,
+                imageSrc: imgData
+            };
+
+            saveData();
+            closeEditModal();
+            renderList();
+            showToast("修改成功！");
+        };
+
+        window.openEditModal = function(id) {
+            const item = items.find(i => String(i.id) === String(id));
+            if (!item) return;
+            
+            const form = document.getElementById('editForm');
+            form.querySelector('[name="editId"]').value = item.id;
+            form.querySelector('[name="name"]').value = item.name;
+            form.querySelector('[name="category"]').value = item.category;
+            form.querySelector('[name="source"]').value = item.source || '';
+            form.querySelector('[name="orderDate"]').value = item.orderDate;
+            form.querySelector('[name="contact"]').value = item.contact || '';
+            form.querySelector('[name="contactLink"]').value = item.contactLink || '';
+            form.querySelector('[name="paymentType"]').value = item.paymentType;
+            form.querySelector('[name="transferDate"]').value = item.transferDate || '';
+            form.querySelector('[name="transferAmount"]').value = item.transferAmount || '';
+            form.querySelector('[name="price"]').value = item.price || '';
+            form.querySelector('[name="secondPay"]').value = item.secondPay || '';
+            form.querySelector('[name="shipping"]').value = item.shipping || '';
+            form.querySelector('[name="link"]').value = item.link || '';
+            form.querySelector('[name="reconcileLink"]').value = item.reconcileLink || '';
+            form.querySelector('[name="notes"]').value = item.notes || '';
+            
+            editImageTemp = item.imageSrc; 
+            
+            const transferDiv = form.querySelector('.transferFields');
+            if (item.paymentType === 'Transfer') transferDiv.classList.remove('hidden');
+            else transferDiv.classList.add('hidden');
+            
+            document.getElementById('editModal').classList.add('active');
+        };
+
+        window.closeEditModal = function() {
+            document.getElementById('editModal').classList.remove('active');
+            editImageTemp = null;
+        };
+
+        window.toggleSelection = function(id) { 
+            id = String(id);
+            if(selectedIds.has(id)) selectedIds.delete(id); 
+            else selectedIds.add(id); 
+            renderList(); 
+            updateBulkBar(); 
+        };
+
+        window.toggleStatus = function(id, key) {
+            const item = items.find(i => String(i.id) === String(id));
+            if(item) {
+                const newStatus = !item.status[key];
+                item.status[key] = newStatus;
+                
+                if(newStatus && ['pendingShip', 'shipped', 'pickedUp'].includes(key)) {
+                    if(!item.dates) item.dates = {};
+                    if(!item.dates[key]) item.dates[key] = new Date().toISOString().split('T')[0];
+                } else if (!newStatus) {
+                    if(item.dates) item.dates[key] = '';
+                }
+                saveData(); renderList();
+            }
+        };
+
+        window.updateStatusDate = function(id, key, dateValue) {
+            const item = items.find(i => String(i.id) === String(id));
+            if(item) {
+                if(!item.dates) item.dates = {};
+                item.dates[key] = dateValue;
+                if(dateValue && !item.status[key]) item.status[key] = true;
+                saveData();
+            }
+        };
+
+        window.deleteItem = function(id) { 
+            if(confirm('確定要刪除這筆紀錄嗎？')) { 
+                items = items.filter(i => String(i.id) !== String(id)); 
+                if(selectedIds.has(String(id))) selectedIds.delete(String(id)); 
+                saveData(); renderList(); populateMonthFilter(); 
+            } 
+        };
+
+        window.deleteSelectedItems = function() { 
+            if(confirm(`確定刪除選取的 ${selectedIds.size} 筆資料？`)) { 
+                items = items.filter(i => !selectedIds.has(String(i.id))); 
+                selectedIds.clear(); 
+                saveData(); renderList(); populateMonthFilter(); updateBulkBar();
+            } 
+        };
+
+        window.mergeSelectedItems = function() { 
+            const name = prompt("輸入併單名稱:"); 
+            if(name) { 
+                items.forEach(i => { if(selectedIds.has(String(i.id))) i.group = name; }); 
+                selectedIds.clear(); 
+                saveData(); renderList(); updateBulkBar();
+            } 
+        };
+
+        window.selectAllVisible = function() {
+            const keyword = document.getElementById('searchInput').value.toLowerCase();
+            const monthVal = document.getElementById('monthFilter').value;
+            const catVal = document.getElementById('categoryFilter').value;
+            
+            const filtered = items.filter(i => {
+                const matchK = (i.name||'').toLowerCase().includes(keyword);
+                const matchM = monthVal === 'all' || i.orderDate.startsWith(monthVal);
+                const matchC = catVal === 'all' || i.category === catVal;
+                return matchK && matchM && matchC;
+            });
+            
+            filtered.forEach(i => selectedIds.add(String(i.id)));
+            renderList(); updateBulkBar();
+        };
+
+        window.clearSelection = function() { selectedIds.clear(); renderList(); updateBulkBar(); };
+        window.ungroupItem = function(id) { if(confirm("移除併單？")) { const i = items.find(x => String(x.id) === String(id)); if(i) { i.group = null; saveData(); renderList(); } } };
+
+        function updateSyncStatus(status) {
+            const box = document.getElementById('syncWrapper');
+            box.className = 'sync-box ' + status;
+            if(status === 'ok') box.innerText = '已同步';
+            else if(status === 'loading') box.innerText = '同步中';
+            else if(status === 'error') box.innerText = '失敗';
+            else box.innerText = '待命';
+        }
+
+        function saveData() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); updateSummary();
+                // 自動上傳
+                uploadToCloud(true);
+            } catch (e) { showToast("儲存空間不足", "error"); }
+        }
+
+        window.uploadToCloud = function(silent = false) { 
+            if(!silent) showToast("正在上傳...", "loading");
+            updateSyncStatus('loading');
+            fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(items) })
+            .then(()=>{ if(!silent) showToast("✅ 上傳成功！"); updateSyncStatus('ok'); })
+            .catch(()=>{ if(!silent) showToast("❌ 上傳失敗", "error"); updateSyncStatus('error'); }); 
+        };
+
+        window.downloadFromCloud = function(silent = false) {
+            if(!silent) showToast("正在下載...", "loading");
+            updateSyncStatus('loading');
+            fetch(API_URL)
+            .then(res => res.json())
+            .then(cloudData => {
+                if(Array.isArray(cloudData)) {
+                    if(cloudData.length > 0 || !silent) {
+                        items = cloudData;
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+                        renderList(); populateMonthFilter();
+                        if(!silent) showToast("✅ 資料已還原！");
+                        updateSyncStatus('ok');
+                    }
+                } else {
+                    if(!silent) showToast("❌ 雲端無資料", "error");
+                }
+            })
+            .catch(e => { if(!silent) showToast("❌ 下載失敗", "error"); updateSyncStatus('error'); });
+        };
+        
+        async function syncWithCloud() {
+            if(isSyncing) return; isSyncing = true; updateSyncStatus('loading');
+            try {
+                const res = await fetch(API_URL); const cloudData = await res.json();
+                if(Array.isArray(cloudData) && cloudData.length >= items.length) {
+                    items = cloudData; localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+                    renderList(); populateMonthFilter();
+                }
+                updateSyncStatus('ok');
+            } catch(e) { updateSyncStatus('error'); } finally { isSyncing = false; }
+        }
+
+        // Excel 智慧邏輯 (V31)
+        function findKey(row, keywords) {
+            const keys = Object.keys(row);
+            for (let k of keys) {
+                for (let word of keywords) {
+                    if (k.includes(word)) return row[k];
+                }
+            }
+            return ""; 
+        }
+
+        function formatExcelDate(dateVal) {
+            if (!dateVal) return "";
+            if (dateVal instanceof Date) {
+                const y = dateVal.getFullYear();
+                const m = String(dateVal.getMonth() + 1).padStart(2, '0');
+                const d = String(dateVal.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            }
+            if (typeof dateVal === 'string') return dateVal.replace(/\//g, '-').split('-').map(p => p.padStart(2, '0')).join('-');
+            if (typeof dateVal === 'number') {
+                const d = new Date(Math.round((dateVal - 25569)*86400*1000));
+                return d.toISOString().split('T')[0];
+            }
+            return "";
+        }
+
+        window.downloadTemplate = function() { 
+            if(typeof XLSX==='undefined'){showToast('網路錯誤: Excel工具未載入', 'error');return;} 
+            const data=[{"商品名稱":"範例","分類":"周邊","下單日期":"2025-01-01","購買來源":"官網","賣家名稱":"@abc","賣家連結":"","付款方式":"銀行匯款","匯款日期":"2025-01-01","匯款金額":500,"單價":500,"二補":0,"國內運費":60,"待出貨日":"","已出貨日":"","取貨日":"","下單連結":"","對帳表連結":"","備註":""}]; 
+            XLSX.writeFile(XLSX.utils.book_new(XLSX.utils.book_append_sheet(XLSX.utils.book_new(), XLSX.utils.json_to_sheet(data), "Sheet1")), "CORTIS_V33範本.xlsx"); 
+        };
+
+        window.exportData = function() { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(items,null,2)],{type:'application/json'})); a.download = `backup_${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); };
+        
+        window.importData = function(input) { 
+            const f = input.files[0]; if(!f) return; 
+            const r = new FileReader(); 
+            r.onload=e=>{ try{ items=JSON.parse(e.target.result); saveData(); populateMonthFilter(); renderList(); showToast("✅ JSON 匯入成功！"); }catch{ showToast("❌ 格式錯誤", "error"); } }; 
+            r.readAsText(f); 
+        };
+        
+        window.clearAllData = function() { if(confirm('清空？')) { items=[]; saveData(); populateMonthFilter(); renderList(); } };
+
+        window.importExcel = function(input) { 
+            if(typeof XLSX==='undefined'){showToast('網路錯誤', 'error');input.value='';return;} 
+            const f=input.files[0]; if(!f)return; 
+            const r=new FileReader(); 
+            
+            r.onload=e=>{ 
+                try { 
+                    const wb = XLSX.read(new Uint8Array(e.target.result), {
+                        type: 'array',
+                        cellDates: true, 
+                        dateNF: 'yyyy-mm-dd'
+                    }); 
+                    const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]); 
+                    
+                    if(json.length===0)throw new Error("無資料"); 
+                    
+                    const newItems = json.map(row => { 
+                        let pType="Pending"; 
+                        const pRaw = String(findKey(row, ["付款"]) || "");
+                        if(pRaw.match(/貨|取|COD/)) pType="COD"; 
+                        else if(pRaw.match(/匯|轉|ATM|銀行|Transfer/)) pType="Transfer"; 
+
+                        const price = Number(findKey(row, ["單價", "本體", "Price"])) || 0;
+                        const secondPay = Number(findKey(row, ["二補", "補款"])) || 0;
+                        const shipping = Number(findKey(row, ["運費", "Shipping"])) || 0;
+                        const transferAmount = Number(findKey(row, ["匯款金額", "金額"])) || 0;
+
+                        return { 
+                            id:String(Date.now()+Math.floor(Math.random()*100000)), 
+                            name: findKey(row, ["商品", "名稱", "Name"]) || "未命名", 
+                            category: findKey(row, ["分類", "Category"]) || "周邊", 
+                            orderDate: formatExcelDate(findKey(row, ["下單", "日期", "Date"])) || new Date().toISOString().split('T')[0], 
+                            source: findKey(row, ["來源", "Source"]) || "", 
+                            contact: findKey(row, ["賣家名稱", "賣家", "Contact"]) || "", 
+                            contactLink: findKey(row, ["賣家連結"]) || "", 
+                            paymentType: pType, 
+                            transferDate: formatExcelDate(findKey(row, ["匯款日期"])), 
+                            transferAmount: transferAmount, 
+                            price: price, 
+                            secondPay: secondPay, 
+                            shipping: shipping, 
+                            link: findKey(row, ["下單連結", "訂購連結"]) || "", 
+                            reconcileLink: findKey(row, ["對帳"]) || "", 
+                            notes: findKey(row, ["備註", "Note"]) || "", 
+                            imageSrc: "", 
+                            group: null, 
+                            status:{
+                                notArrived:true, 
+                                pendingShip:!!findKey(row, ["待出貨"]), 
+                                shipped:!!findKey(row, ["已出貨"]), 
+                                pickedUp:!!findKey(row, ["取貨"])
+                            }, 
+                            dates:{
+                                pendingShip:formatExcelDate(findKey(row, ["待出貨"])), 
+                                shipped:formatExcelDate(findKey(row, ["已出貨"])), 
+                                pickedUp:formatExcelDate(findKey(row, ["取貨"]))
+                            } 
+                        }; 
+                    }); 
+                    
+                    items=[...newItems,...items]; 
+                    saveData(); 
+                    populateMonthFilter(); 
+                    renderList(); 
+                    showToast(`🎉 成功匯入 ${newItems.length} 筆`); 
+                } catch(err) {
+                    showToast("❌ "+err.message, "error");
+                } finally {
+                    input.value='';
+                } 
+            }; 
+            r.readAsArrayBuffer(f); 
+        }
+
+        // 安全性
+        function togglePinSetting() {
+            const isEnabled = document.getElementById('pinToggle').checked;
+            const area = document.getElementById('pinChangeArea');
+            appSettings.pinEnabled = isEnabled;
+            if(isEnabled) { area.classList.remove('hidden'); if(!appSettings.pin) appSettings.pin="0000"; showToast(`密碼已開啟`); } 
+            else { area.classList.add('hidden'); }
+            localStorage.setItem(SETTINGS_KEY, JSON.stringify(appSettings));
+        }
+        function saveNewPin() {
+            const newPin = document.getElementById('newPinInput').value;
+            if(newPin.length !== 4 || isNaN(newPin)) { showToast("請輸入4位數字", "error"); return; }
+            appSettings.pin = newPin;
+            localStorage.setItem(SETTINGS_KEY, JSON.stringify(appSettings));
+            showToast("密碼修改成功");
+            document.getElementById('newPinInput').value = '';
+        }
+
+        function compressImage(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.readAsDataURL(file);
-                reader.onload = (event) => {
-                    const img = new Image();
-                    img.src = event.target.result;
+                reader.onload = (e) => {
+                    const img = new Image(); img.src = e.target.result;
                     img.onload = () => {
-                        // 建立 Canvas 進行壓縮
-                        const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 600; // 限制最大寬度 600px
-                        const scaleSize = MAX_WIDTH / img.width;
-                        
-                        // 如果圖片原本就很小，就不縮放
-                        if (scaleSize >= 1) {
-                            resolve(event.target.result);
-                            return;
-                        }
-
-                        canvas.width = MAX_WIDTH;
-                        canvas.height = img.height * scaleSize;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        
-                        // 輸出壓縮後的圖片 (品質 0.7)
-                        resolve(canvas.toDataURL('image/jpeg', 0.7));
+                        const cvs = document.createElement('canvas'); const ctx = cvs.getContext('2d');
+                        const maxW = 600; const scale = maxW/img.width;
+                        const w = (scale<1)?maxW:img.width; const h = (scale<1)?img.height*scale:img.height;
+                        cvs.width=w; cvs.height=h; ctx.drawImage(img,0,0,w,h);
+                        resolve(cvs.toDataURL('image/jpeg', 0.6));
                     };
-                    img.onerror = (error) => reject(error);
+                    img.onerror = reject;
                 };
-                reader.onerror = error => reject(error);
+                reader.onerror = reject;
             });
         }
 
-        // 新增商品
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault(); // 阻止表單跳轉
+        // --- 介面邏輯 ---
+        window.switchView = function(view, el) {
+            Object.values(views).forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            views[view].classList.add('active'); 
+            if(el) el.classList.add('active');
+            
+            if(view === 'home') { renderList(); updateBulkBar(); }
+            else { document.getElementById('bulkActions').classList.remove('active'); }
+            window.scrollTo(0,0);
+        };
 
-            // 顯示載入中... (防止重複按)
-            const btn = form.querySelector('.btn-submit');
-            const originalText = btn.innerText;
-            btn.innerText = "處理中...";
-            btn.disabled = true;
+        window.renderList = function() {
+            const grid = document.getElementById('merchGrid'); grid.innerHTML = '';
+            const keyword = document.getElementById('searchInput').value.toLowerCase();
+            const monthVal = document.getElementById('monthFilter').value;
+            const catVal = document.getElementById('categoryFilter').value;
 
-            try {
-                const imageInput = document.getElementById('imageInput');
-                let imageSrc = DEFAULT_IMG;
+            let filtered = items.filter(i => {
+                const matchK = (i.name||'').toLowerCase().includes(keyword);
+                const matchM = monthVal === 'all' || i.orderDate.startsWith(monthVal);
+                const matchC = catVal === 'all' || i.category === catVal;
+                return matchK && matchM && matchC;
+            });
+
+            filtered.sort((a,b) => sortDesc ? new Date(b.orderDate)-new Date(a.orderDate) : new Date(a.orderDate)-new Date(b.orderDate));
+            document.getElementById('emptyState').style.display = filtered.length ? 'none' : 'block';
+            updateSummary(filtered);
+
+            filtered.forEach(item => {
+                const total = (item.price||0) + (item.secondPay||0) + (item.shipping||0);
                 
-                if (imageInput.files.length > 0) {
-                    imageSrc = await getBase64(imageInput.files[0]);
+                let checksHtml = '';
+                STATUS_KEYS.forEach(k => {
+                    const checked = item.status[k] ? 'checked' : '';
+                    const dateVal = (item.dates && item.dates[k]) ? item.dates[k] : '';
+                    let dateInputHtml = '';
+                    if (['pendingShip', 'shipped', 'pickedUp'].includes(k)) {
+                        const style = checked ? '' : 'visibility:hidden; height:0;';
+                        dateInputHtml = `<input type="date" class="mini-date" value="${dateVal}" style="${style}" onchange="updateStatusDate('${item.id}', '${k}', this.value)" onclick="event.stopPropagation()">`;
+                    }
+                    checksHtml += `
+                        <div class="check-group ${checked}">
+                            <div class="check-left" onclick="toggleStatus('${item.id}', '${k}')">
+                                <div class="check-box"></div>
+                                <span class="check-label">${STATUS_LABELS[k]}</span>
+                            </div>
+                            ${dateInputHtml}
+                        </div>`;
+                });
+
+                let contactDisplay = item.contact || '-';
+                if(item.contactLink) contactDisplay = `<a class="contact-link" onclick="window.open('${item.contactLink}', '_blank')">${item.contact || '連結'}</a>`;
+                let groupHtml = item.group ? `<span class="group-tag">📦 ${item.group} <span class="remove-group" onclick="ungroupItem('${item.id}')">×</span></span>` : '';
+                
+                const isSelected = selectedIds.has(String(item.id)) ? 'selected' : '';
+                const checkMark = selectedIds.has(String(item.id)) ? '' : ''; 
+                const openUrl = (url) => url ? `window.open('${url}','_blank')` : '';
+                const btnStyle = (url) => url ? '' : 'color:#ccc; cursor:default;';
+
+                const noteBtnText = item.notes ? "查看備註" : "無備註";
+                const noteBtnColor = item.notes ? "#333" : "#999";
+                const noteContent = item.notes || "無內容";
+                
+                let payText = PAYMENT_LABELS[item.paymentType] || item.paymentType;
+                if(item.paymentType === 'Transfer' && item.transferDate) {
+                    payText += ` (${item.transferDate})`;
                 }
 
-                const paymentType = document.querySelector('input[name="paymentType"]:checked').value;
-                
-                const newMerch = {
-                    id: Date.now(),
-                    name: document.getElementById('name').value,
-                    orderDate: document.getElementById('orderDate').value,
-                    source: document.getElementById('source').value,
-                    paymentType: paymentType,
-                    transferDate: document.getElementById('transferDate').value,
-                    transferAmount: Number(document.getElementById('transferAmount').value),
-                    price: Number(document.getElementById('price').value),
-                    secondPay: Number(document.getElementById('secondPay').value),
-                    shipping: Number(document.getElementById('shipping').value),
-                    link: document.getElementById('link').value,
-                    sellerLink: document.getElementById('sellerLink').value,
-                    notes: document.getElementById('notes').value,
-                    imageSrc: imageSrc,
-                    group: null,
-                    status: {
-                        ordered: true,
-                        paid: paymentType === 'Transfer',
-                        shipped: false,
-                        secondPayDone: false,
-                        arrived: false,
-                        received: false
-                    },
-                    refund: { isRefunded: false, date: '', amount: 0 }
-                };
+                const card = document.createElement('div');
+                card.className = `merch-card ${isSelected}`;
+                const imgClick = item.imageSrc ? `onclick="showImage('${item.imageSrc}'); event.stopPropagation();"` : '';
+                const imgHtml = item.imageSrc ? `<img src="${item.imageSrc}" class="card-thumb" ${imgClick}>` : `<div class="card-thumb"></div>`;
 
-                merchData.unshift(newMerch);
-                
-                // 嘗試儲存
-                try {
-                    localStorage.setItem('cortisTrackerDataV2', JSON.stringify(merchData));
-                    renderMerch();
-                    updateStats();
-                    form.reset();
-                    document.getElementById('orderDate').valueAsDate = new Date();
-                    togglePaymentFields();
-                    alert("✅ 建立成功！"); // 成功提示
-                } catch (storageError) {
-                    // 如果儲存失敗 (通常是容量滿了)，回滾資料
-                    merchData.shift(); 
-                    alert("❌ 儲存失敗：圖片可能還是太大，或是儲存空間已滿。請試著不要上傳圖片。");
-                    console.error(storageError);
-                }
+                card.innerHTML = `
+                    <div class="card-select-overlay" onclick="toggleSelection('${item.id}'); event.stopPropagation();"><div class="custom-checkbox">${checkMark}</div></div>
+                    <div class="card-status-bar">${STATUS_KEYS.map(k => `<div class="status-segment ${item.status[k]?'active':''}"></div>`).join('')}</div>
+                    <div class="card-header">${imgHtml}
+                        <div class="card-title-group"><div>${groupHtml}<span class="category-tag">${item.category||'周邊'}</span></div><div class="card-title">${item.name}</div><div class="card-subtitle">${item.orderDate} · ${item.source||''}</div></div>
+                    </div>
+                    <div class="info-grid">
+                        <span class="label">付款方式</span><span class="value" style="font-size:13px;">${payText}</span>
+                        <span class="label">單價</span><span class="value">${item.price||0}</span>
+                        <span class="label">二補</span><span class="value">${item.secondPay||0}</span>
+                        <span class="label">國內運費</span><span class="value">${item.shipping||0}</span>
+                        <span class="label" style="font-weight:900; color:#000;">總計</span><span class="value highlight">NT$ ${total}</span>
+                    </div>
+                    
+                    <button class="note-toggle-btn" style="color:${noteBtnColor}" onclick="toggleNote(this)">${noteBtnText}</button>
+                    <div class="note-content">${noteContent}</div>
+                    
+                    <div class="checklist-col">${checksHtml}</div>
+                    
+                    <div class="seller-info"><span>賣家資訊</span><span>${contactDisplay}</span></div>
 
-            } catch (error) {
-                alert("❌ 發生錯誤：" + error.message);
-                console.error(error);
-            } finally {
-                btn.innerText = originalText;
-                btn.disabled = false;
-            }
-        });
+                    <div class="card-actions">
+                        <button class="action-btn" onclick="openEditModal('${item.id}')">編輯</button>
+                        <button class="action-btn" onclick="${openUrl(item.link)}" style="${btnStyle(item.link)}">下單連結</button>
+                        <button class="action-btn" onclick="${openUrl(item.reconcileLink)}" style="${btnStyle(item.reconcileLink)}">對帳表</button>
+                        <button class="action-btn text-red" onclick="deleteItem('${item.id}')">刪除</button>
+                    </div>`;
+                grid.appendChild(card);
+            });
+            updateBulkBar();
+        };
+
+        function updateBulkBar() { 
+            const bar = document.getElementById('bulkActions'); 
+            const isHome = document.getElementById('view-home').classList.contains('active');
+            if(selectedIds.size > 0 && isHome) { 
+                bar.classList.add('active'); 
+                document.getElementById('selectedCount').innerText = selectedIds.size; 
+            } else { bar.classList.remove('active'); } 
+        }
+
+        window.toggleNote = function(btn) {
+            const content = btn.nextElementSibling;
+            if(content.innerText === "無內容") return;
+            content.classList.toggle('show');
+            btn.innerHTML = content.classList.contains('show') ? "隱藏備註" : "查看備註";
+        };
+
+        function updateSummary(filteredItems = items) {
+            const total = filteredItems.reduce((acc, i) => acc + (i.price||0) + (i.secondPay||0) + (i.shipping||0), 0);
+            document.getElementById('summaryTotal').innerText = `NT$ ${total.toLocaleString()}`;
+            document.getElementById('summaryCount').innerText = filteredItems.length;
+        }
+
+        function populateMonthFilter() {
+            const select = document.getElementById('monthFilter');
+            const currentVal = select.value;
+            const months = [...new Set(items.map(i => i.orderDate.substring(0, 7)))].sort().reverse();
+            let html = '<option value="all">📅 所有月份</option>';
+            months.forEach(m => { const [y, mm] = m.split('-'); html += `<option value="${m}">${y}年 ${mm}月</option>`; });
+            select.innerHTML = html;
+            if(months.includes(currentVal)) select.value = currentVal; else select.value = "all";
+        }
+
+        window.openSubPage = function(page) {
+            Object.values(views).forEach(v => v.classList.remove('active'));
+            if(page === 'main') views.settings.classList.add('active');
+            else if(page === 'data') views.settingsData.classList.add('active');
+            else if(page === 'security') views.settingsSecurity.classList.add('active');
+            document.getElementById('bulkActions').classList.remove('active');
+            window.scrollTo(0,0);
+        };
+    </script>
+</body>
+</html>
